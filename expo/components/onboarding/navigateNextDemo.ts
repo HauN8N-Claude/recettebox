@@ -4,7 +4,10 @@ export type DemoParcours = "social" | "web" | "manuscript";
 export type DemoTrack = "A" | "B" | "C";
 
 const ORDER: DemoParcours[] = ["social", "web", "manuscript"];
-const TRACK_ORDER: DemoTrack[] = ["A", "B", "C"];
+// V1.0 : seul le parcours A (réseaux sociaux) est actif.
+// B (web) et C (manuscrites) sont reportés en V1.1 / V1.2 — leurs démos
+// restent sur le disque mais ne sont plus accessibles via le routing.
+const TRACK_ORDER: DemoTrack[] = ["A"];
 
 const FIRST_ROUTE: Record<DemoParcours, string> = {
   social: "/onboarding/demo-a1",
@@ -12,10 +15,8 @@ const FIRST_ROUTE: Record<DemoParcours, string> = {
   manuscript: "/onboarding/demo-c1",
 };
 
-const FIRST_ROUTE_BY_TRACK: Record<DemoTrack, string> = {
+const FIRST_ROUTE_BY_TRACK: Partial<Record<DemoTrack, string>> = {
   A: "/onboarding/demo-a1",
-  B: "/onboarding/demo-b1",
-  C: "/onboarding/demo-c1",
 };
 
 const PARCOURS_TO_TRACK: Record<DemoParcours, DemoTrack> = {
@@ -51,9 +52,10 @@ export function navigateNextDemo(
 
   const currentIdx = currentTrack ? TRACK_ORDER.indexOf(currentTrack) : -1;
   const next = TRACK_ORDER.slice(currentIdx + 1).find((t) => selectedTracks.includes(t));
+  const nextRoute = next ? FIRST_ROUTE_BY_TRACK[next] : undefined;
 
-  if (next) {
-    router.push(FIRST_ROUTE_BY_TRACK[next] as never);
+  if (nextRoute) {
+    router.push(nextRoute as never);
     return;
   }
   router.push(PAYWALL_ROUTE as never);

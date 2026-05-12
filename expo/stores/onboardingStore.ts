@@ -9,7 +9,7 @@ export type OnboardingAnswers = {
 
   // Séquence 2
   q3_sources: ("instagram" | "tiktok" | "pinterest" | "web" | "manuscript")[];
-  q4_sources: ("tiktok" | "instagram" | "pinterest" | "youtube" | "sites_web")[];
+  q4_sources: ("tiktok" | "instagram" | "pinterest")[];
   q4_totalRecipes: number;
   q4_weeklySaved: "few" | "ten" | "many" | "countless" | null;
   q5_cookedRecipes: number;

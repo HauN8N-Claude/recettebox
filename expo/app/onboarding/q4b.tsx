@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore, type OnboardingAnswers } from "@/stores/onboardingStore";
 
 type Weekly = NonNullable<OnboardingAnswers["q4_weeklySaved"]>;
@@ -53,7 +54,7 @@ export default function Q4bScreen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={4 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q4b")} onBack={() => router.back()} />
       <View style={styles.content}>
         <Reveal delay={60}>
           <Text style={styles.title}>

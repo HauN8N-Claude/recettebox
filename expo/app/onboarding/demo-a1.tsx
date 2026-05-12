@@ -18,6 +18,7 @@ import {
   OnboardingHeader,
 } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import {
   navigateNextDemo,
@@ -116,7 +117,7 @@ export default function DemoA1Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={0.55} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("demo-intro")} onBack={() => router.back()} />
       <View style={styles.skipRow}>
         <Pressable hitSlop={12} onPress={onSkip}>
           <Text style={styles.skipLabel}>Passer</Text>
@@ -135,7 +136,7 @@ export default function DemoA1Screen() {
         </Reveal>
         <Reveal delay={300}>
           <Text style={styles.body}>
-            Insta, TikTok, Pinterest, YouTube — tout en un geste.
+            Insta, TikTok, Pinterest — tout en un geste.
           </Text>
         </Reveal>
 

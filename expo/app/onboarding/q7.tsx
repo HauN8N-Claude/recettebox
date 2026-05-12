@@ -6,6 +6,7 @@ import { Home, User, Users, UsersRound } from "lucide-react-native";
 import { Colors, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader, OptionCard } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore, type OnboardingAnswers } from "@/stores/onboardingStore";
 
 type Household = NonNullable<OnboardingAnswers["q9_household"]>;
@@ -32,7 +33,7 @@ export default function Q7Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={7 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q7")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

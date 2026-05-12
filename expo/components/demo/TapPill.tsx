@@ -7,9 +7,11 @@ import { Colors, demoAnimations, demoColors } from "@/constants/theme";
 type Props = {
   text: string;
   position?: { top?: number | string; right?: number | string; bottom?: number | string; left?: number | string };
+  /** Si fourni, remplace l'icône ChevronDown par cette emoji (ex: "👇"). */
+  emoji?: string;
 };
 
-export function TapPill({ text, position }: Props) {
+export function TapPill({ text, position, emoji }: Props) {
   const ty = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -43,7 +45,11 @@ export function TapPill({ text, position }: Props) {
     <View pointerEvents="none" style={wrapStyle}>
       <Animated.View style={[styles.pill, { transform: [{ translateY: ty }] }]}>
         <Text style={styles.text}>{text}</Text>
-        <ChevronDown size={14} color={demoColors.pillText} strokeWidth={2.4} />
+        {emoji ? (
+          <Text style={styles.emoji}>{emoji}</Text>
+        ) : (
+          <ChevronDown size={14} color={demoColors.pillText} strokeWidth={2.4} />
+        )}
       </Animated.View>
     </View>
   );
@@ -68,6 +74,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 13,
     color: demoColors.pillText,
+  },
+  emoji: {
+    fontSize: 14,
   },
 });
 

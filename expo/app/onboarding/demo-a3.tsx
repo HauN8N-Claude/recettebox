@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors, Spacing } from "@/constants/theme";
-import { OnboardingFooter } from "@/components/onboarding";
 import { HaloPulse, TapPill } from "@/components/demo";
 import { Reveal } from "@/components/Reveal";
 import { useOnboardingStore } from "@/stores/onboardingStore";
@@ -23,11 +22,24 @@ import {
 
 const SHARE_IMG = require("@/assets/demo/A3-share-instagram.png");
 
+// Position de l'icône RecetteBox dans la share sheet de A3-share-instagram.png.
+// L'icône RecetteBox est la 2ème app de la rangée (après AirDrop).
+const TAP_TARGET = {
+  topPct: 0.62, // 62% depuis le haut du mockup
+  leftPct: 0.28, // 28% depuis la gauche
+};
+
+const HITBOX_RADIUS = 60;
+
 export default function DemoA3Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const selected = useOnboardingStore((s) => s.selectedSources);
   const [imgError, setImgError] = React.useState<boolean>(false);
+  const [mockupSize, setMockupSize] = React.useState<{
+    width: number;
+    height: number;
+  }>({ width: 0, height: 0 });
 
   const onSkip = () => {
     if (Platform.OS !== "web") {
@@ -35,6 +47,16 @@ export default function DemoA3Screen() {
     }
     navigateNextDemo(router, selected as DemoTrack[], "A");
   };
+
+  const onTapTarget = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    router.push("/onboarding/demo-a4");
+  };
+
+  const centerX = mockupSize.width * TAP_TARGET.leftPct;
+  const centerY = mockupSize.height * TAP_TARGET.topPct;
 
   return (
     <View style={styles.wrap}>
@@ -50,7 +72,15 @@ export default function DemoA3Screen() {
         </Reveal>
       </View>
 
-      <View style={styles.mockupArea}>
+      <View
+        style={styles.mockupArea}
+        onLayout={(e) =>
+          setMockupSize({
+            width: e.nativeEvent.layout.width,
+            height: e.nativeEvent.layout.height,
+          })
+        }
+      >
         <View style={styles.mockup}>
           {imgError ? (
             <Text style={styles.mockupLabel}>Image non chargée</Text>
@@ -64,11 +94,45 @@ export default function DemoA3Screen() {
           )}
         </View>
 
-        <HaloPulse size={60} position={{ top: "50%" as unknown as number, left: "22%" as unknown as number }} />
-        <TapPill
-          text="RecetteBox 👇"
-          position={{ top: "42%" as unknown as number, left: "16%" as unknown as number }}
-        />
+        {mockupSize.width > 0 && (
+          <>
+            {/* Hitbox invisible centrée sur l'icône RecetteBox */}
+            <Pressable
+              onPress={onTapTarget}
+              accessibilityRole="button"
+              accessibilityLabel="Choisis RecetteBox dans la liste de partage"
+              style={[
+                styles.hitbox,
+                {
+                  width: HITBOX_RADIUS * 2,
+                  height: HITBOX_RADIUS * 2,
+                  borderRadius: HITBOX_RADIUS,
+                  top: centerY - HITBOX_RADIUS,
+                  left: centerX - HITBOX_RADIUS,
+                },
+              ]}
+            />
+
+            {/* Halo pulsant — décoratif */}
+            <HaloPulse
+              size={56}
+              position={{
+                top: centerY - 28,
+                left: centerX - 28,
+              }}
+            />
+
+            {/* Pill "Appuyez ici 👇" — positionnée juste au-dessus du halo */}
+            <TapPill
+              text="Appuyez ici"
+              emoji="👇"
+              position={{
+                top: centerY - 64,
+                left: centerX - 70,
+              }}
+            />
+          </>
+        )}
       </View>
 
       <Pressable
@@ -79,11 +143,6 @@ export default function DemoA3Screen() {
       >
         <Text style={styles.skipLabel}>Passer ›</Text>
       </Pressable>
-
-      <OnboardingFooter
-        label="Continuer"
-        onPress={() => router.push("/onboarding/demo-a4")}
-      />
     </View>
   );
 }
@@ -117,6 +176,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 24,
     marginHorizontal: Spacing.screen,
+    marginBottom: 24,
     position: "relative",
   },
   mockup: {
@@ -132,6 +192,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.creme,
     letterSpacing: 1.2,
+  },
+  hitbox: {
+    position: "absolute",
+    zIndex: 15,
   },
   skipOverlay: {
     position: "absolute",

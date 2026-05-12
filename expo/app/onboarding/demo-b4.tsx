@@ -79,7 +79,7 @@ export default function DemoB4Screen() {
 
       <OnboardingFooter
         label="Continuer"
-        onPress={() => router.push("/onboarding/demo-b6")}
+        onPress={() => router.push("/onboarding/demo-b5")}
       />
     </View>
   );

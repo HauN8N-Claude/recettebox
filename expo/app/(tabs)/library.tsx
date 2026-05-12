@@ -29,6 +29,7 @@ import { useRouter } from "expo-router";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { SourceIcon } from "@/components/SourceIcon";
+import { useSeenRecipesStore, isRecipeNew } from "@/stores/seenRecipesStore";
 
 type FilterKey = "all" | "antigaspi" | "recent" | "favorites";
 
@@ -351,10 +352,18 @@ function RecipeGridCard({
   recipe: Recipe;
   onPress: () => void;
 }) {
+  const seenIds = useSeenRecipesStore((s) => s.seenIds);
+  const isNew = isRecipeNew(recipe, seenIds);
+
   return (
     <PressableScale style={styles.card} scaleTo={0.97} onPress={onPress}>
       <View style={styles.cardImageWrap}>
         <Image source={{ uri: recipe.imageUrl }} style={styles.cardImage} />
+        {isNew && (
+          <View style={styles.newBadge}>
+            <Text style={styles.newBadgeText}>Nouvelle</Text>
+          </View>
+        )}
         {recipe.isFavorite && (
           <View style={styles.favBadge}>
             <Heart
@@ -525,6 +534,22 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.creme,
     alignItems: "center",
     justifyContent: "center",
+  },
+  newBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: Colors.sauge,
+  },
+  newBadgeText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 9,
+    color: Colors.creme,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   cardBody: {
     padding: 12,

@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Colors, Spacing } from "@/constants/theme";
 import { MultiOptionCard, OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 
 const NONE = "rien" as const;
@@ -44,7 +45,7 @@ export default function Q8Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={8 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q8")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

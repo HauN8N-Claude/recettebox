@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors, Spacing } from "@/constants/theme";
-import { OnboardingFooter } from "@/components/onboarding";
 import { HaloPulse, TapPill } from "@/components/demo";
 import { Reveal } from "@/components/Reveal";
 import { useOnboardingStore } from "@/stores/onboardingStore";
@@ -23,11 +22,26 @@ import {
 
 const INSTA_IMG = require("@/assets/demo/A1-instagram-post.png");
 
+// Position du bouton "Partager" (icône ✈) sur l'image A1-instagram-post.png.
+// Valeurs en % de la zone mockup pour rester responsive aux différents devices.
+// La rangée d'actions (cœur, comment, ✈) est juste sous la photo du risotto.
+const TAP_TARGET = {
+  // Coordonnées du centre du halo
+  topPct: 0.72, // 72% depuis le haut du mockup
+  leftPct: 0.20, // 20% depuis la gauche du mockup
+};
+
+const HITBOX_RADIUS = 60; // 60px de rayon autour du centre du halo
+
 export default function DemoA2Screen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const selected = useOnboardingStore((s) => s.selectedSources);
   const [imgError, setImgError] = React.useState<boolean>(false);
+  const [mockupSize, setMockupSize] = React.useState<{
+    width: number;
+    height: number;
+  }>({ width: 0, height: 0 });
 
   const onSkip = () => {
     if (Platform.OS !== "web") {
@@ -35,6 +49,17 @@ export default function DemoA2Screen() {
     }
     navigateNextDemo(router, selected as DemoTrack[], "A");
   };
+
+  const onTapTarget = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    router.push("/onboarding/demo-a3");
+  };
+
+  // Position absolue du centre de la hitbox dans le mockup
+  const centerX = mockupSize.width * TAP_TARGET.leftPct;
+  const centerY = mockupSize.height * TAP_TARGET.topPct;
 
   return (
     <View style={styles.wrap}>
@@ -50,22 +75,67 @@ export default function DemoA2Screen() {
         </Reveal>
       </View>
 
-      <View style={styles.mockupArea}>
+      <View
+        style={styles.mockupArea}
+        onLayout={(e) =>
+          setMockupSize({
+            width: e.nativeEvent.layout.width,
+            height: e.nativeEvent.layout.height,
+          })
+        }
+      >
         <View style={styles.mockup}>
           {imgError ? (
             <Text style={styles.mockupLabel}>Image non chargée</Text>
           ) : (
             <Image
               source={INSTA_IMG}
-              style={[StyleSheet.absoluteFill, styles.mockupImg]}
+              style={StyleSheet.absoluteFill}
               resizeMode="cover"
               onError={() => setImgError(true)}
             />
           )}
         </View>
 
-        <HaloPulse size={56} position={{ bottom: "18%" as unknown as number, left: "18%" as unknown as number }} />
-        <TapPill text="Tape ici 👇" position={{ bottom: "28%" as unknown as number, left: "14%" as unknown as number }} />
+        {mockupSize.width > 0 && (
+          <>
+            {/* Hitbox invisible centrée sur le bouton partage */}
+            <Pressable
+              onPress={onTapTarget}
+              accessibilityRole="button"
+              accessibilityLabel="Appuie sur le bouton Partager"
+              style={[
+                styles.hitbox,
+                {
+                  width: HITBOX_RADIUS * 2,
+                  height: HITBOX_RADIUS * 2,
+                  borderRadius: HITBOX_RADIUS,
+                  top: centerY - HITBOX_RADIUS,
+                  left: centerX - HITBOX_RADIUS,
+                },
+              ]}
+            />
+
+            {/* Halo pulsant (décoratif, pointerEvents none — la hitbox au-dessus capte) */}
+            <HaloPulse
+              size={56}
+              position={{
+                top: centerY - 28,
+                left: centerX - 28,
+              }}
+            />
+
+            {/* Pill "Appuyez ici 👇" — positionnée juste au-dessus du halo */}
+            <TapPill
+              text="Appuyez ici"
+              emoji="👇"
+              position={{
+                top: centerY - 64,
+                left: centerX - 70,
+              }}
+            />
+          </>
+        )}
       </View>
 
       <Pressable
@@ -76,11 +146,6 @@ export default function DemoA2Screen() {
       >
         <Text style={styles.skipLabel}>Passer ›</Text>
       </Pressable>
-
-      <OnboardingFooter
-        label="J'ai compris"
-        onPress={() => router.push("/onboarding/demo-a3")}
-      />
     </View>
   );
 }
@@ -114,6 +179,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 24,
     marginHorizontal: Spacing.screen,
+    marginBottom: 24,
     position: "relative",
   },
   mockup: {
@@ -124,14 +190,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
   },
-  mockupImg: {
-    opacity: 0.85,
-  },
   mockupLabel: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
     color: Colors.creme,
     letterSpacing: 1.2,
+  },
+  hitbox: {
+    position: "absolute",
+    // Hitbox invisible — pas de couleur, pas de bordure
+    zIndex: 15,
   },
   skipOverlay: {
     position: "absolute",

@@ -15,6 +15,7 @@ import Svg, { Path } from "react-native-svg";
 import { Colors, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore, type OnboardingAnswers } from "@/stores/onboardingStore";
 
 type Source = OnboardingAnswers["q4_sources"][number];
@@ -23,15 +24,17 @@ const OPTIONS: { value: Source; label: string; icon: string }[] = [
   { value: "tiktok", label: "TikTok", icon: "🎵" },
   { value: "instagram", label: "Instagram", icon: "📷" },
   { value: "pinterest", label: "Pinterest", icon: "📌" },
-  { value: "youtube", label: "YouTube", icon: "🎬" },
-  { value: "sites_web", label: "Sites web ou blogs", icon: "🌐" },
 ];
 
 export default function Q4Screen() {
   const router = useRouter();
   const stored = useOnboardingStore((s) => s.q4_sources);
   const setAnswer = useOnboardingStore((s) => s.setAnswer);
-  const [selected, setSelected] = useState<Source[]>(stored ?? []);
+  const [selected, setSelected] = useState<Source[]>(
+    (stored ?? []).filter(
+      (s): s is Source => s === "tiktok" || s === "instagram" || s === "pinterest"
+    )
+  );
 
   const toggle = (value: Source) => {
     if (Platform.OS !== "web") {
@@ -49,8 +52,6 @@ export default function Q4Screen() {
       tiktok: "TikTok",
       instagram: "Instagram",
       pinterest: "Pinterest",
-      youtube: "YouTube",
-      sites_web: "Sites web ou blogs",
     };
     setAnswer("platforms", selected.map((s) => PLATFORM_LABEL[s]));
     router.push("/onboarding/q4b");
@@ -58,7 +59,7 @@ export default function Q4Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={3 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q4")} onBack={() => router.back()} />
       <View style={styles.content}>
         <Reveal delay={60}>
           <Text style={styles.title}>Où tu trouves le plus de recettes ?</Text>

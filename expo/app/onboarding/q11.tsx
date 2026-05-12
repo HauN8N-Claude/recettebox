@@ -9,6 +9,7 @@ import {
   OnboardingHeader,
 } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 
 const OPTIONS: { value: string; label: string }[] = [
@@ -50,7 +51,7 @@ export default function Q11Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={10 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q11")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

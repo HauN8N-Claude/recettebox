@@ -15,6 +15,7 @@ import { GripHorizontal } from "lucide-react-native";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 
 const OPTIONS: { value: string; label: string }[] = [
@@ -134,7 +135,7 @@ export default function Q10Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={9 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q10")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

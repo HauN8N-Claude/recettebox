@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
+  Alert,
   Animated,
   Easing,
   Platform,
@@ -170,6 +171,11 @@ export default function WelcomeScreen() {
     if (Platform.OS !== "web") {
       Haptics.selectionAsync().catch(() => {});
     }
+    Alert.alert(
+      "Connexion bientôt disponible",
+      "La connexion à un compte existant arrivera très vite. En attendant, lance « Commencer » — on retrouvera ton carnet une fois la connexion en place.",
+      [{ text: "Compris", style: "default" }]
+    );
   };
 
   return (

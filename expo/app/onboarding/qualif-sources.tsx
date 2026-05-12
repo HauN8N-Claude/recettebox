@@ -15,6 +15,7 @@ import {
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { navigateNextDemo, type DemoParcours } from "@/components/onboarding/navigateNextDemo";
 
@@ -23,6 +24,7 @@ type CardConfig = {
   label: string;
   sublabel: string;
   accent: string;
+  comingSoon?: boolean;
   renderTrailing: (color: string) => React.ReactNode;
 };
 
@@ -45,6 +47,7 @@ const CARDS: CardConfig[] = [
     label: "Sites web ou blogs",
     sublabel: "Marmiton, blogs, magazines en ligne…",
     accent: Colors.sauge,
+    comingSoon: true,
     renderTrailing: (color) => <Globe size={20} color={color} strokeWidth={1.8} />,
   },
   {
@@ -52,6 +55,7 @@ const CARDS: CardConfig[] = [
     label: "Recettes manuscrites ou imprimées",
     sublabel: "Carnet de famille, livre de cuisine, photo de magazine…",
     accent: Colors.miel,
+    comingSoon: true,
     renderTrailing: (color) => <BookMarked size={20} color={color} strokeWidth={1.8} />,
   },
 ];
@@ -66,11 +70,14 @@ function SourceCard({
   onPress: () => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
+  const disabled = !!cfg.comingSoon;
   return (
     <Pressable
+      disabled={disabled}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
+      accessibilityState={{ checked: selected, disabled }}
       onPressIn={() => {
+        if (disabled) return;
         Animated.spring(scale, {
           toValue: 0.98,
           useNativeDriver: true,
@@ -79,6 +86,7 @@ function SourceCard({
         }).start();
       }}
       onPressOut={() => {
+        if (disabled) return;
         Animated.spring(scale, {
           toValue: 1,
           useNativeDriver: true,
@@ -87,6 +95,7 @@ function SourceCard({
         }).start();
       }}
       onPress={() => {
+        if (disabled) return;
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         }
@@ -100,6 +109,7 @@ function SourceCard({
             ? { backgroundColor: Colors.creme, borderColor: cfg.accent, borderWidth: 2 }
             : { backgroundColor: Colors.cremeDeep, borderColor: Colors.rule, borderWidth: 1 },
           { transform: [{ scale }] },
+          disabled && styles.cardDisabled,
         ]}
       >
         <View
@@ -113,9 +123,16 @@ function SourceCard({
           {selected ? <Check size={14} color={Colors.creme} strokeWidth={3} /> : null}
         </View>
         <View style={styles.cardText}>
-          <Text style={[styles.cardLabel, selected && styles.cardLabelActive]}>
-            {cfg.label}
-          </Text>
+          <View style={styles.labelRow}>
+            <Text style={[styles.cardLabel, selected && styles.cardLabelActive]}>
+              {cfg.label}
+            </Text>
+            {disabled && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Bientôt</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.cardSublabel}>{cfg.sublabel}</Text>
         </View>
         <View style={styles.trailing}>{cfg.renderTrailing(Colors.cacao)}</View>
@@ -126,12 +143,20 @@ function SourceCard({
 
 export default function QualifSourcesScreen() {
   const router = useRouter();
+  // q14_firstName n'est jamais set pendant l'onboarding initial.
+  // Il sera renseigné par l'auth (Apple/Google/Email) déclenchée au paywall
+  // final, donc la salutation personnalisée n'est active qu'aux sessions
+  // suivantes (utilisateur revenant déjà connecté). Le fallback ci-dessous
+  // gère le premier passage.
   const firstName = useOnboardingStore((s) => s.q14_firstName);
   const stored = useOnboardingStore((s) => s.q3_sources_demo);
   const setAnswer = useOnboardingStore((s) => s.setAnswer);
-  const [selected, setSelected] = useState<DemoParcours[]>(stored ?? []);
+  const [selected, setSelected] = useState<DemoParcours[]>(
+    (stored ?? []).filter((s) => s === "social")
+  );
 
   const toggle = (value: DemoParcours) => {
+    if (value !== "social") return;
     setSelected((prev) =>
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
     );
@@ -147,7 +172,7 @@ export default function QualifSourcesScreen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={15 / 16} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("qualif-sources")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -160,7 +185,7 @@ export default function QualifSourcesScreen() {
           </Text>
         </Reveal>
         <Reveal delay={180}>
-          <Text style={styles.subtitle}>D&apos;où viennent tes recettes en général ?</Text>
+          <Text style={styles.subtitle}>D&apos;où viennent tes recettes ?</Text>
         </Reveal>
         <Reveal delay={240}>
           <Text style={styles.subtitleMuted}>Plusieurs choix possibles.</Text>
@@ -254,5 +279,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     alignItems: "center",
+  },
+  cardDisabled: {
+    opacity: 0.55,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: Colors.cremeDeep,
+    borderWidth: 1,
+    borderColor: Colors.rule,
+  },
+  badgeText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    color: Colors.cacao,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
 });

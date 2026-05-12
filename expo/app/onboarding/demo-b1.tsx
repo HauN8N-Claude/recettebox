@@ -18,6 +18,7 @@ import {
   OnboardingHeader,
 } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import {
   navigateNextDemo,
@@ -119,7 +120,7 @@ export default function DemoB1Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={0.7} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("demo-intro")} onBack={() => router.back()} />
       <View style={styles.skipRow}>
         <Pressable hitSlop={12} onPress={onSkip}>
           <Text style={styles.skipLabel}>Passer</Text>

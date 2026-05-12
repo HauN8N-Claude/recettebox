@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   Animated,
   Image,
@@ -19,6 +19,7 @@ import {
   Heart,
   Minus,
   Plus,
+  ShoppingCart,
   Users,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
@@ -28,6 +29,8 @@ import { Colors, Radius, Spacing } from "@/constants/theme";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { SourceIcon } from "@/components/SourceIcon";
+import { useSeenRecipesStore } from "@/stores/seenRecipesStore";
+import { useServingsStore } from "@/stores/servingsStore";
 
 const HERO_HEIGHT = 360;
 
@@ -91,7 +94,17 @@ export default function RecipeDetailScreen() {
     [id],
   );
 
-  const [servings, setServings] = useState<number>(recipe?.servings ?? 4);
+  const markAsSeen = useSeenRecipesStore((s) => s.markAsSeen);
+  useEffect(() => {
+    if (id) markAsSeen(id);
+  }, [id, markAsSeen]);
+
+  const recipeId = recipe?.id ?? "";
+  const defaultServings = recipe?.servings ?? 4;
+  const servings = useServingsStore(
+    (s) => s.servingsByRecipe[recipeId] ?? defaultServings,
+  );
+  const setServingsInStore = useServingsStore((s) => s.setServings);
   const [favorite, setFavorite] = useState<boolean>(
     recipe?.isFavorite ?? false,
   );
@@ -131,13 +144,13 @@ export default function RecipeDetailScreen() {
 
   const adjustServings = useCallback(
     (delta: number) => {
-      setServings((s) => {
-        const next = Math.min(12, Math.max(1, s + delta));
-        if (next !== s) handleHaptic(Haptics.ImpactFeedbackStyle.Light);
-        return next;
-      });
+      const next = Math.min(12, Math.max(1, servings + delta));
+      if (next !== servings) {
+        handleHaptic(Haptics.ImpactFeedbackStyle.Light);
+        setServingsInStore(recipeId, next);
+      }
     },
-    [handleHaptic],
+    [handleHaptic, servings, recipeId, setServingsInStore],
   );
 
   const toggleCheck = useCallback(
@@ -355,7 +368,22 @@ export default function RecipeDetailScreen() {
         {/* Ingredients */}
         <Reveal delay={460}>
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Ingrédients</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>Ingrédients</Text>
+              <Pressable
+                onPress={() => {
+                  handleHaptic(Haptics.ImpactFeedbackStyle.Light);
+                  router.push(`/recipe/${recipe.id}/shopping-list`);
+                }}
+                hitSlop={8}
+                style={styles.shoppingListLink}
+                accessibilityRole="link"
+                accessibilityLabel="Voir la liste de courses"
+              >
+                <ShoppingCart size={14} color={Colors.terracotta} strokeWidth={2} />
+                <Text style={styles.shoppingListLinkText}>Liste de courses</Text>
+              </Pressable>
+            </View>
             <View style={{ gap: 22 }}>
               {grouped.map((group) => (
                 <View key={group.cat}>
@@ -651,6 +679,24 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: Colors.sauge,
     marginBottom: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  shoppingListLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 16,
+  },
+  shoppingListLinkText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.terracotta,
   },
 
   servingsRow: {

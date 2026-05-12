@@ -14,6 +14,7 @@ import {
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 
 const SAUGE_DEEP = "#5F6E52";
@@ -239,7 +240,7 @@ export default function Q10bFiltersScreen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={10 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q10b-filters")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

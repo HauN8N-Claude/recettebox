@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore, type OnboardingAnswers } from "@/stores/onboardingStore";
 
 type Ratio = NonNullable<OnboardingAnswers["q5_cooked_ratio"]>;
@@ -52,7 +53,7 @@ export default function Q5Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={5 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q5")} onBack={() => router.back()} />
       <View style={styles.content}>
         <Reveal delay={60}>
           <Text style={styles.title}>Et combien tu en as vraiment cuisinées ?</Text>

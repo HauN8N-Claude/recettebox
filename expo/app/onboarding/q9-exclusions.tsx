@@ -16,6 +16,7 @@ import { Check, Plus, X } from "lucide-react-native";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { MultiOptionCard, OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 
 type AllergyValue =
@@ -116,7 +117,7 @@ export default function Q9ExclusionsScreen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={9 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q9-exclusions")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

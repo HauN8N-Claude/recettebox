@@ -6,6 +6,7 @@ import { AlertCircle, Bookmark, Flame, Users, Zap } from "lucide-react-native";
 import { Colors, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import {
   cookedLabel,
@@ -43,7 +44,7 @@ export default function Q11bProfileScreen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={11 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q11b-profile")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Colors, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader, OptionCard } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore, type OnboardingAnswers } from "@/stores/onboardingStore";
 
 type Value = NonNullable<OnboardingAnswers["q6_frequency"]>;
@@ -30,7 +31,7 @@ export default function Q6Screen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={6 / 12} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q6")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

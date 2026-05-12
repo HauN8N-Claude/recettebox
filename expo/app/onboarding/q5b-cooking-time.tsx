@@ -6,6 +6,7 @@ import { ChefHat, Clock, Clock3, Zap } from "lucide-react-native";
 import { Colors, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader, OptionCard } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
+import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore, type OnboardingAnswers } from "@/stores/onboardingStore";
 
 type CookingTime = NonNullable<OnboardingAnswers["cookingTime"]>;
@@ -32,7 +33,7 @@ export default function CookingTimeScreen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={12 / 16} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q5b-cooking-time")} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
