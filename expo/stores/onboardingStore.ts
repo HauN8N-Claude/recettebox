@@ -9,7 +9,7 @@ export type OnboardingAnswers = {
 
   // Séquence 2
   q3_sources: ("instagram" | "tiktok" | "pinterest" | "web" | "manuscript")[];
-  q4_sources: ("tiktok" | "instagram" | "pinterest")[];
+  q4_sources: ("tiktok" | "instagram" | "pinterest" | "web" | "manuscript")[];
   q4_totalRecipes: number;
   q4_weeklySaved: "few" | "ten" | "many" | "countless" | null;
   q5_cookedRecipes: number;
@@ -69,6 +69,16 @@ type OnboardingActions = {
   setCurrentDemoTrack: (track: "A" | "B" | "C" | null) => void;
   reset: () => void;
   finish: () => void;
+  /**
+   * Hydrate le store en bloc depuis un profil distant (Supabase).
+   * Utilisé par B6.3 quand l'app démarre sur un device où le store local est vide
+   * mais où le user a déjà fini l'onboarding en BD (changement de device, réinstall).
+   *
+   * - Merge non destructif : seules les clés fournies sont écrasées.
+   * - Marque isOnboarded = true automatiquement (vu qu'on hydrate depuis un profil
+   *   sync, c'est qu'il a terminé l'onboarding).
+   */
+  hydrateFromProfile: (remote: Partial<OnboardingAnswers>) => void;
 };
 
 const initialAnswers: OnboardingAnswers = {
@@ -118,6 +128,12 @@ export const useOnboardingStore = create<OnboardingAnswers & OnboardingActions>(
       setCurrentDemoTrack: (track) => set({ currentDemoTrack: track }),
       reset: () => set({ ...initialAnswers }),
       finish: () => set({ isOnboarded: true }),
+      hydrateFromProfile: (remote) =>
+        set((state) => ({
+          ...state,
+          ...remote,
+          isOnboarded: true,
+        })),
     }),
     {
       name: "recettebox.onboarding.v1",

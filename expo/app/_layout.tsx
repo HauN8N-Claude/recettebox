@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 
 import { useOnboardingStore } from "@/stores/onboardingStore";
+import { useAuthStore } from "@/stores/authStore";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -27,6 +28,7 @@ import {
 import { Platform, View } from "react-native";
 
 import { Colors } from "@/constants/theme";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -50,20 +52,37 @@ if (Platform.OS === "web" && typeof console !== "undefined") {
 
 const queryClient = new QueryClient();
 
-function OnboardingGate() {
+function RootGate() {
   const isOnboarded = useOnboardingStore((s) => s.isOnboarded);
+  const session = useAuthStore((s) => s.session);
+  const ready = useAuthStore((s) => s.ready);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
+    if (!ready) return;
     const first = segments[0];
+    const inAuth = first === "auth";
     const inOnboarding = first === "onboarding";
-    if (!isOnboarded && !inOnboarding) {
-      router.replace("/onboarding");
-    } else if (isOnboarded && inOnboarding) {
-      router.replace("/(tabs)");
+
+    if (session) {
+      if (inAuth || inOnboarding) {
+        router.replace("/(tabs)");
+      }
+      return;
     }
-  }, [isOnboarded, segments, router]);
+
+    if (isOnboarded) {
+      if (!inAuth) {
+        router.replace("/auth/login");
+      }
+      return;
+    }
+
+    if (!inOnboarding) {
+      router.replace("/onboarding");
+    }
+  }, [ready, session, isOnboarded, segments, router]);
 
   return null;
 }
@@ -78,6 +97,8 @@ function RootLayoutNav() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, animation: "fade" }} />
+      <Stack.Screen name="auth" options={{ headerShown: false, animation: "fade" }} />
+      <Stack.Screen name="legal" options={{ headerShown: false }} />
       <Stack.Screen
         name="recipe/[id]"
         options={{
@@ -103,6 +124,14 @@ function RootLayoutNav() {
           contentStyle: { backgroundColor: "transparent" },
         }}
       />
+      <Stack.Screen
+        name="import/processing/[jobId]"
+        options={{
+          headerShown: false,
+          presentation: "fullScreenModal",
+          animation: "slide_from_bottom",
+        }}
+      />
     </Stack>
   );
 }
@@ -121,14 +150,20 @@ export default function RootLayout() {
     Caveat_500Medium,
     Caveat_600SemiBold,
   });
+  const initAuth = useAuthStore((s) => s.init);
+  const authReady = useAuthStore((s) => s.ready);
 
   useEffect(() => {
-    if (fontsLoaded) {
+    initAuth();
+  }, [initAuth]);
+
+  useEffect(() => {
+    if (fontsLoaded && authReady) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, authReady]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !authReady) {
     return <View style={{ flex: 1, backgroundColor: Colors.creme }} />;
   }
 
@@ -136,8 +171,10 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.creme }}>
         <StatusBar style="dark" />
-        <OnboardingGate />
-        <RootLayoutNav />
+        <ErrorBoundary>
+          <RootGate />
+          <RootLayoutNav />
+        </ErrorBoundary>
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

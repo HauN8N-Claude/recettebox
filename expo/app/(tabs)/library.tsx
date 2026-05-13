@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from "react";
 import {
+  ActivityIndicator,
   Image,
   Platform,
   Pressable,
@@ -23,7 +24,8 @@ import {
 import * as Haptics from "expo-haptics";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
-import { recipes, type Recipe } from "@/constants/mockData";
+import { type Recipe } from "@/constants/mockData";
+import { useRecipes } from "@/lib/api/recipes";
 import { useRouter } from "expo-router";
 
 import { Reveal } from "@/components/Reveal";
@@ -48,6 +50,15 @@ export default function LibraryScreen() {
   const [mode, setMode] = useState<ModeKey>("j12");
   const [query, setQuery] = useState<string>("");
   const [filter, setFilter] = useState<FilterKey>("all");
+
+  // Fetch des recettes depuis Supabase (cache React Query partagé avec home).
+  const recipesQuery = useRecipes();
+
+  // Mode "j1" du DevToggle : force la biblio à vide (test empty state sans
+  // devoir supprimer ses recettes en BD). N'impacte que l'UI, pas la BD.
+  const recipes = mode === "j1" ? [] : recipesQuery.data ?? [];
+  const isLoading = mode === "j1" ? false : recipesQuery.isLoading;
+  const isError = mode === "j1" ? false : recipesQuery.isError;
 
   const toggleMode = useCallback(() => {
     if (Platform.OS !== "web") {
@@ -79,9 +90,11 @@ export default function LibraryScreen() {
       );
     }
     return list;
-  }, [filter, query]);
+  }, [filter, query, recipes]);
 
-  const isEmpty = mode === "j1";
+  // Empty quand : mode "j1" (override DevToggle), OU data réellement vide,
+  // OU on a fini de charger et la liste est vide.
+  const isEmpty = recipes.length === 0 && !isLoading && !isError;
 
   return (
     <View style={styles.container}>
@@ -93,7 +106,11 @@ export default function LibraryScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Ton carnet</Text>
               <Text style={styles.subtitle}>
-                {isEmpty
+                {isLoading
+                  ? "Chargement…"
+                  : isError
+                  ? "Connexion impossible."
+                  : isEmpty
                   ? "Tout commence ici."
                   : `${recipes.length} recettes sauvées`}
               </Text>
@@ -102,7 +119,7 @@ export default function LibraryScreen() {
           </View>
         </Reveal>
 
-        {!isEmpty && (
+        {!isEmpty && !isLoading && !isError && (
           <Reveal delay={120}>
             <View style={styles.searchWrap}>
               <Search size={16} color={Colors.cacao} strokeWidth={2} />
@@ -128,7 +145,7 @@ export default function LibraryScreen() {
           </Reveal>
         )}
 
-        {!isEmpty && (
+        {!isEmpty && !isLoading && !isError && (
           <Reveal delay={220}>
             <ScrollView
               horizontal
@@ -163,7 +180,11 @@ export default function LibraryScreen() {
         )}
       </View>
 
-      {isEmpty ? (
+      {isError ? (
+        <ErrorState onRetry={() => recipesQuery.refetch()} />
+      ) : isLoading ? (
+        <LoadingState />
+      ) : isEmpty ? (
         <EmptyState
           insetsBottom={insets.bottom}
           onImport={() => router.push("/import")}
@@ -176,6 +197,32 @@ export default function LibraryScreen() {
           onOpen={(id) => router.push(`/recipe/${id}`)}
         />
       )}
+    </View>
+  );
+}
+
+function LoadingState() {
+  return (
+    <View style={styles.statusWrap}>
+      <ActivityIndicator size="large" color={Colors.terracotta} />
+    </View>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View style={styles.statusWrap}>
+      <Reveal delay={120}>
+        <Text style={styles.errorTitle}>On n&apos;a pas pu charger ton carnet.</Text>
+        <Text style={styles.errorBody}>
+          Vérifie ta connexion internet, puis réessaie.
+        </Text>
+      </Reveal>
+      <Reveal delay={260}>
+        <PressableScale style={styles.retryCta} onPress={onRetry}>
+          <Text style={styles.retryCtaText}>Réessayer</Text>
+        </PressableScale>
+      </Reveal>
     </View>
   );
 }
@@ -711,5 +758,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.cacao,
     textAlign: "center",
+  },
+
+  statusWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.screen,
+    paddingBottom: 80,
+    gap: 16,
+  },
+  errorTitle: {
+    fontFamily: "Fraunces_400Regular_Italic",
+    fontSize: 22,
+    color: Colors.encre,
+    textAlign: "center",
+  },
+  errorBody: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: Colors.cacao,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  retryCta: {
+    marginTop: 12,
+    paddingHorizontal: 24,
+    height: 48,
+    borderRadius: Radius.cta,
+    backgroundColor: Colors.terracotta,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  retryCtaText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: Colors.creme,
   },
 });

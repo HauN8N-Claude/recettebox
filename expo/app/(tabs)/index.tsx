@@ -19,11 +19,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
-import {
-  currentUser,
-  recentlyImported,
-  suggestedRecipe,
-} from "@/constants/mockData";
+import { currentUser } from "@/constants/mockData";
+import { useRecipes } from "@/lib/api/recipes";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { ProgressCurve } from "@/components/ProgressCurve";
@@ -43,13 +40,24 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [revealKey, setRevealKey] = useState<number>(0);
 
-  const onRefresh = useCallback(() => {
+  // Recettes du user depuis Supabase. Le cache est partagé avec library.tsx
+  // (queryKey ["recipes"]) : pas de double fetch en passant d'un tab à l'autre.
+  const recipesQuery = useRecipes();
+  const recipesList = recipesQuery.data ?? [];
+  // Triées par imported_at desc dans fetchRecipes → la plus récente est en [0],
+  // les 4 suivantes alimentent le carrousel "Récemment importées".
+  const suggestedRecipe = recipesList[0];
+  const recentlyImported = recipesList.slice(1, 5);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      await recipesQuery.refetch();
+    } finally {
       setRefreshing(false);
       setRevealKey((k) => k + 1);
-    }, 700);
-  }, []);
+    }
+  }, [recipesQuery]);
 
   const day = dayNumber();
 
@@ -116,42 +124,44 @@ export default function HomeScreen() {
         </View>
       </Reveal>
 
-      {/* SUGGESTION */}
-      <Reveal key={`s-${revealKey}`} delay={380}>
-        <View style={styles.section}>
-          <Text style={[styles.systemLabel, { color: Colors.sauge }]}>
-            Suggestion du jour
-          </Text>
-          <PressableScale
-            onPress={() => router.push(`/recipe/${suggestedRecipe.id}`)}
-            style={styles.suggestionCard}
-          >
-            <Image
-              source={{ uri: suggestedRecipe.imageUrl }}
-              style={styles.suggestionImage}
-            />
-            <View style={styles.suggestionBody}>
-              <Text style={styles.suggestionTitle} numberOfLines={2}>
-                {suggestedRecipe.title}
-              </Text>
-              <View style={styles.pillRow}>
-                <View style={styles.saugePill}>
-                  <Text style={styles.saugePillText}>Anti-gaspi</Text>
+      {/* SUGGESTION (masqué si pas de recettes en BD) */}
+      {suggestedRecipe && (
+        <Reveal key={`s-${revealKey}`} delay={380}>
+          <View style={styles.section}>
+            <Text style={[styles.systemLabel, { color: Colors.sauge }]}>
+              Suggestion du jour
+            </Text>
+            <PressableScale
+              onPress={() => router.push(`/recipe/${suggestedRecipe.id}`)}
+              style={styles.suggestionCard}
+            >
+              <Image
+                source={{ uri: suggestedRecipe.imageUrl }}
+                style={styles.suggestionImage}
+              />
+              <View style={styles.suggestionBody}>
+                <Text style={styles.suggestionTitle} numberOfLines={2}>
+                  {suggestedRecipe.title}
+                </Text>
+                <View style={styles.pillRow}>
+                  <View style={styles.saugePill}>
+                    <Text style={styles.saugePillText}>Anti-gaspi</Text>
+                  </View>
+                </View>
+                <Text style={styles.suggestionMeta}>
+                  {suggestedRecipe.prepTimeMinutes +
+                    suggestedRecipe.cookTimeMinutes}{" "}
+                  min · {suggestedRecipe.servings} personnes
+                </Text>
+                <View style={styles.ghostCta}>
+                  <Text style={styles.ghostCtaText}>Voir la recette</Text>
+                  <ArrowRight size={14} color={Colors.terracotta} strokeWidth={2.2} />
                 </View>
               </View>
-              <Text style={styles.suggestionMeta}>
-                {suggestedRecipe.prepTimeMinutes +
-                  suggestedRecipe.cookTimeMinutes}{" "}
-                min · {suggestedRecipe.servings} personnes
-              </Text>
-              <View style={styles.ghostCta}>
-                <Text style={styles.ghostCtaText}>Voir la recette</Text>
-                <ArrowRight size={14} color={Colors.terracotta} strokeWidth={2.2} />
-              </View>
-            </View>
-          </PressableScale>
-        </View>
-      </Reveal>
+            </PressableScale>
+          </View>
+        </Reveal>
+      )}
 
       {/* QUICK ACCESS GRID */}
       <Reveal key={`q-${revealKey}`} delay={560}>
@@ -187,56 +197,58 @@ export default function HomeScreen() {
         </View>
       </Reveal>
 
-      {/* RECENTLY IMPORTED */}
-      <Reveal key={`r-${revealKey}`} delay={740}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.systemLabel, { color: Colors.cacao }]}>
-              Récemment importées
-            </Text>
-            <PressableScale
-              onPress={() => router.push("/(tabs)/library")}
-              haptic
-            >
-              <View style={styles.linkRow}>
-                <Text style={styles.linkText}>Voir tout</Text>
-                <ArrowRight size={13} color={Colors.terracotta} strokeWidth={2.2} />
-              </View>
-            </PressableScale>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={172}
-            decelerationRate="fast"
-            contentContainerStyle={styles.carousel}
-          >
-            {recentlyImported.map((r) => (
+      {/* RECENTLY IMPORTED (masqué si pas assez de recettes en BD) */}
+      {recentlyImported.length > 0 && (
+        <Reveal key={`r-${revealKey}`} delay={740}>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.systemLabel, { color: Colors.cacao }]}>
+                Récemment importées
+              </Text>
               <PressableScale
-                key={r.id}
-                onPress={() => router.push(`/recipe/${r.id}`)}
-                style={styles.miniCard}
+                onPress={() => router.push("/(tabs)/library")}
+                haptic
               >
-                <Image
-                  source={{ uri: r.imageUrl }}
-                  style={styles.miniImage}
-                />
-                <View style={styles.miniBody}>
-                  <Text style={styles.miniTitle} numberOfLines={2}>
-                    {r.title}
-                  </Text>
-                  <View style={styles.miniSourceRow}>
-                    <SourceIcon source={r.source} />
-                    <Text style={styles.miniSource} numberOfLines={1}>
-                      {r.sourceAuthor ?? "Carnet perso"}
-                    </Text>
-                  </View>
+                <View style={styles.linkRow}>
+                  <Text style={styles.linkText}>Voir tout</Text>
+                  <ArrowRight size={13} color={Colors.terracotta} strokeWidth={2.2} />
                 </View>
               </PressableScale>
-            ))}
-          </ScrollView>
-        </View>
-      </Reveal>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={172}
+              decelerationRate="fast"
+              contentContainerStyle={styles.carousel}
+            >
+              {recentlyImported.map((r) => (
+                <PressableScale
+                  key={r.id}
+                  onPress={() => router.push(`/recipe/${r.id}`)}
+                  style={styles.miniCard}
+                >
+                  <Image
+                    source={{ uri: r.imageUrl }}
+                    style={styles.miniImage}
+                  />
+                  <View style={styles.miniBody}>
+                    <Text style={styles.miniTitle} numberOfLines={2}>
+                      {r.title}
+                    </Text>
+                    <View style={styles.miniSourceRow}>
+                      <SourceIcon source={r.source} />
+                      <Text style={styles.miniSource} numberOfLines={1}>
+                        {r.sourceAuthor ?? "Carnet perso"}
+                      </Text>
+                    </View>
+                  </View>
+                </PressableScale>
+              ))}
+            </ScrollView>
+          </View>
+        </Reveal>
+      )}
 
       {/* FOOTER WHISPER */}
       <Reveal key={`f-${revealKey}`} delay={920}>

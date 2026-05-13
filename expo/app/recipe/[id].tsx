@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Image,
   Platform,
@@ -24,8 +25,8 @@ import {
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
-import { recipes, type Recipe } from "@/constants/mockData";
 import { Colors, Radius, Spacing } from "@/constants/theme";
+import { useRecipe } from "@/lib/api/recipes";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { SourceIcon } from "@/components/SourceIcon";
@@ -89,10 +90,14 @@ export default function RecipeDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const recipe = useMemo<Recipe | undefined>(
-    () => recipes.find((r) => r.id === id),
-    [id],
-  );
+  // Fetch de la recette complète (avec ingredients + steps triés) depuis Supabase.
+  // Cache React Query : queryKey ["recipe", id]. Indépendant du cache liste
+  // ["recipes"] : ouvrir la fiche déclenche un fetch dédié (acceptable car
+  // l'écran a besoin des ingredients/steps qui ne sont pas dans la liste).
+  const recipeQuery = useRecipe(id);
+  const recipe = recipeQuery.data ?? undefined;
+  const isLoading = recipeQuery.isLoading;
+  const isError = recipeQuery.isError;
 
   const markAsSeen = useSeenRecipesStore((s) => s.markAsSeen);
   useEffect(() => {
@@ -188,6 +193,32 @@ export default function RecipeDetailScreen() {
       items: buckets.get(c) ?? [],
     }));
   }, [recipe, servings]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.notFoundWrap}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color={Colors.terracotta} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.notFoundWrap}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text style={styles.notFoundTitle}>
+          On n&apos;a pas pu charger cette recette.
+        </Text>
+        <PressableScale
+          onPress={() => recipeQuery.refetch()}
+          style={styles.backCta}
+        >
+          <Text style={styles.backCtaText}>Réessayer</Text>
+        </PressableScale>
+      </View>
+    );
+  }
 
   if (!recipe) {
     return (
