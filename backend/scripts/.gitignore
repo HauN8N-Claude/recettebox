@@ -1,0 +1,9 @@
+# Secrets — ne JAMAIS commit
+.env.local
+.env
+
+# URLs personnelles à tester (peuvent identifier des comptes privés)
+urls.json
+
+# Résultats des tests (peuvent contenir des données scraping)
+results/

@@ -1,0 +1,56 @@
+{
+  "_comment": "Renomme ce fichier en urls.json et remplis avec 10 vraies URLs. Garde bien les guillemets et les virgules.",
+  "_format": "type peut etre: instagram-reel | instagram-carousel-photo | instagram-photo | tiktok-video | tiktok-photo-mode",
+  "urls": [
+    {
+      "label": "Reel Insta vidéo #1",
+      "type": "instagram-reel",
+      "url": "https://www.instagram.com/reel/REMPLACE_MOI/"
+    },
+    {
+      "label": "Reel Insta vidéo #2",
+      "type": "instagram-reel",
+      "url": "https://www.instagram.com/reel/REMPLACE_MOI/"
+    },
+    {
+      "label": "Carrousel photo Insta #1",
+      "type": "instagram-carousel-photo",
+      "url": "https://www.instagram.com/p/REMPLACE_MOI/"
+    },
+    {
+      "label": "Carrousel photo Insta #2",
+      "type": "instagram-carousel-photo",
+      "url": "https://www.instagram.com/p/REMPLACE_MOI/"
+    },
+    {
+      "label": "Photo unique Insta #1",
+      "type": "instagram-photo",
+      "url": "https://www.instagram.com/p/REMPLACE_MOI/"
+    },
+    {
+      "label": "Photo unique Insta #2",
+      "type": "instagram-photo",
+      "url": "https://www.instagram.com/p/REMPLACE_MOI/"
+    },
+    {
+      "label": "TikTok vidéo classique #1",
+      "type": "tiktok-video",
+      "url": "https://www.tiktok.com/@AUTEUR/video/REMPLACE_MOI"
+    },
+    {
+      "label": "TikTok vidéo classique #2",
+      "type": "tiktok-video",
+      "url": "https://www.tiktok.com/@AUTEUR/video/REMPLACE_MOI"
+    },
+    {
+      "label": "TikTok Photo Mode #1",
+      "type": "tiktok-photo-mode",
+      "url": "https://www.tiktok.com/@AUTEUR/photo/REMPLACE_MOI"
+    },
+    {
+      "label": "TikTok Photo Mode #2",
+      "type": "tiktok-photo-mode",
+      "url": "https://www.tiktok.com/@AUTEUR/photo/REMPLACE_MOI"
+    }
+  ]
+}

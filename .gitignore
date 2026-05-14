@@ -1,5 +1,11 @@
 node_modules
 node_modules_old_060021
+dist
 .env
+.env.local
 .expo
 .rork
+.DS_Store
+*.log
+.bin/
+*.exe
