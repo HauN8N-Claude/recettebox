@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { BookOpen, Calendar, Home, ShoppingCart, User } from "lucide-react-native";
+import { BookOpen, Calendar, Home, ShoppingCart } from "lucide-react-native";
 import React from "react";
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -105,18 +105,11 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Profil masqué de la tab bar — accessible via l'avatar en haut à droite de l'accueil */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profil",
-          tabBarIcon: ({ color, focused }) => (
-            <User
-              color={color}
-              size={22}
-              strokeWidth={focused ? 2.2 : 1.8}
-              opacity={focused ? 1 : 0.55}
-            />
-          ),
+          href: null,
         }}
       />
     </Tabs>

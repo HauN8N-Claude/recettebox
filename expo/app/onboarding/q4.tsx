@@ -24,6 +24,8 @@ const OPTIONS: { value: Source; label: string; icon: string }[] = [
   { value: "tiktok", label: "TikTok", icon: "🎵" },
   { value: "instagram", label: "Instagram", icon: "📷" },
   { value: "pinterest", label: "Pinterest", icon: "📌" },
+  { value: "web", label: "Blog / Site internet", icon: "🌐💻" },
+  { value: "manuscript", label: "Recettes manuscrites", icon: "✍️📒" },
 ];
 
 export default function Q4Screen() {
@@ -32,7 +34,12 @@ export default function Q4Screen() {
   const setAnswer = useOnboardingStore((s) => s.setAnswer);
   const [selected, setSelected] = useState<Source[]>(
     (stored ?? []).filter(
-      (s): s is Source => s === "tiktok" || s === "instagram" || s === "pinterest"
+      (s): s is Source =>
+        s === "tiktok" ||
+        s === "instagram" ||
+        s === "pinterest" ||
+        s === "web" ||
+        s === "manuscript"
     )
   );
 
@@ -52,6 +59,8 @@ export default function Q4Screen() {
       tiktok: "TikTok",
       instagram: "Instagram",
       pinterest: "Pinterest",
+      web: "Blog / Site internet",
+      manuscript: "Recettes manuscrites",
     };
     setAnswer("platforms", selected.map((s) => PLATFORM_LABEL[s]));
     router.push("/onboarding/q4b");

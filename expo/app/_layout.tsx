@@ -32,6 +32,12 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 SplashScreen.preventAutoHideAsync();
 
+// DEV — Étape 1 visuelle de l'écran "révélation post-import".
+// Quand `true` : au démarrage de l'app, on saute login/onboarding et on route
+// direct vers /recipe/reveal/preview pour juger le rendu sur Expo Go.
+// Basculer sur `false` pour revenir au flow normal de l'app.
+const DEV_PREVIEW_REVEAL = true;
+
 // Silence a known react-native-web warning where some internal Animated.View
 // components leak the RN-only `collapsable` prop down to the DOM. It is
 // harmless but noisy in dev. We filter only this specific message.
@@ -61,6 +67,17 @@ function RootGate() {
 
   useEffect(() => {
     if (!ready) return;
+
+    if (DEV_PREVIEW_REVEAL) {
+      // `useSegments()` renvoie le pattern de route (`[id]`), pas l'URL réelle.
+      // On laisse passer toute la branche /recipe/* en preview (révélation, aha, fiche).
+      const onRecipeRoute = segments[0] === "recipe";
+      if (!onRecipeRoute) {
+        router.replace("/recipe/reveal/preview");
+      }
+      return;
+    }
+
     const first = segments[0];
     const inAuth = first === "auth";
     const inOnboarding = first === "onboarding";
@@ -105,6 +122,20 @@ function RootLayoutNav() {
           headerShown: false,
           presentation: "modal",
           animation: "slide_from_bottom",
+        }}
+      />
+      <Stack.Screen
+        name="recipe/reveal/[id]"
+        options={{
+          headerShown: false,
+          animation: "fade",
+        }}
+      />
+      <Stack.Screen
+        name="recipe/aha/[id]"
+        options={{
+          headerShown: false,
+          animation: "fade",
         }}
       />
       <Stack.Screen

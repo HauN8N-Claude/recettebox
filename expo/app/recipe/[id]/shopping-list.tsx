@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from "react";
 import {
+  ActivityIndicator,
   Image,
   Platform,
   Pressable,
@@ -20,11 +21,11 @@ import {
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
-import { recipes, type Recipe } from "@/constants/mockData";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { SourceIcon } from "@/components/SourceIcon";
+import { useRecipe } from "@/lib/api/recipes";
 import { useServingsStore } from "@/stores/servingsStore";
 import { useCheckedIngredientsStore } from "@/stores/checkedIngredientsStore";
 
@@ -82,10 +83,13 @@ export default function ShoppingListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const recipe = useMemo<Recipe | undefined>(
-    () => recipes.find((r) => r.id === id),
-    [id],
-  );
+  // Recette complète (ingredients + steps) chargée depuis Supabase.
+  // Partage le cache React Query ["recipe", id] avec la fiche recette
+  // → si l'user vient de la fiche, le data est déjà chaud.
+  const recipeQuery = useRecipe(id);
+  const recipe = recipeQuery.data ?? undefined;
+  const isLoading = recipeQuery.isLoading;
+  const isError = recipeQuery.isError;
 
   const recipeId = recipe?.id ?? "";
   const defaultServings = recipe?.servings ?? 4;
@@ -98,6 +102,7 @@ export default function ShoppingListScreen() {
     (s) => s.checkedByRecipe[recipeId] ?? {},
   );
   const toggleCheckInStore = useCheckedIngredientsStore((s) => s.toggleCheck);
+  const setManyChecked = useCheckedIngredientsStore((s) => s.setManyChecked);
 
   const handleHaptic = useCallback((style: Haptics.ImpactFeedbackStyle) => {
     if (Platform.OS !== "web") {
@@ -123,6 +128,18 @@ export default function ShoppingListScreen() {
     },
     [handleHaptic, recipeId, toggleCheckInStore],
   );
+
+  const allIndices = useMemo(
+    () => (recipe ? recipe.ingredients.map((_, i) => i) : []),
+    [recipe],
+  );
+  const allChecked =
+    allIndices.length > 0 && allIndices.every((i) => checked[i]);
+
+  const toggleAll = useCallback(() => {
+    handleHaptic(Haptics.ImpactFeedbackStyle.Medium);
+    setManyChecked(recipeId, allIndices, !allChecked);
+  }, [allChecked, allIndices, handleHaptic, recipeId, setManyChecked]);
 
   const buildShoppingListText = useCallback((): string => {
     if (!recipe) return "";
@@ -177,6 +194,32 @@ export default function ShoppingListScreen() {
       items: buckets.get(c) ?? [],
     }));
   }, [recipe, servings]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.notFoundWrap}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color={Colors.terracotta} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.notFoundWrap}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text style={styles.notFoundTitle}>
+          On n&apos;a pas pu charger cette liste.
+        </Text>
+        <PressableScale
+          onPress={() => recipeQuery.refetch()}
+          style={styles.backCta}
+        >
+          <Text style={styles.backCtaText}>Réessayer</Text>
+        </PressableScale>
+      </View>
+    );
+  }
 
   if (!recipe) {
     return (
@@ -286,7 +329,22 @@ export default function ShoppingListScreen() {
         {/* Ingredients to buy */}
         <Reveal delay={300}>
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>À acheter</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>À acheter</Text>
+              <Pressable
+                onPress={toggleAll}
+                hitSlop={8}
+                style={styles.toggleAllLink}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  allChecked ? "Tout décocher" : "Tout cocher"
+                }
+              >
+                <Text style={styles.toggleAllText}>
+                  {allChecked ? "Tout décocher" : "Tout cocher"}
+                </Text>
+              </Pressable>
+            </View>
             <View style={{ gap: 22 }}>
               {grouped.map((group) => (
                 <View key={group.cat}>
@@ -419,6 +477,21 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: Colors.sauge,
     marginBottom: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  toggleAllLink: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 16,
+  },
+  toggleAllText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.terracotta,
   },
   servingsRow: {
     flexDirection: "row",

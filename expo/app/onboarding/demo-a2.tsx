@@ -9,46 +9,34 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors, Spacing } from "@/constants/theme";
-import { HaloPulse, TapPill } from "@/components/demo";
+import { HaloPulse, SocialLogosRow, TapPill } from "@/components/demo";
+import { OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
-import { useOnboardingStore } from "@/stores/onboardingStore";
-import {
-  navigateNextDemo,
-  type DemoTrack,
-} from "@/components/onboarding/navigateNextDemo";
+import { progressFor } from "@/constants/onboardingSteps";
 
 const INSTA_IMG = require("@/assets/demo/A1-instagram-post.png");
+const INSTA_IMG_META = Image.resolveAssetSource(INSTA_IMG);
+const INSTA_IMG_ASPECT = INSTA_IMG_META.width / INSTA_IMG_META.height;
 
 // Position du bouton "Partager" (icône ✈) sur l'image A1-instagram-post.png.
-// Valeurs en % de la zone mockup pour rester responsive aux différents devices.
-// La rangée d'actions (cœur, comment, ✈) est juste sous la photo du risotto.
+// Valeurs en % de l'IMAGE entière (pas du container) — fonctionne avec resizeMode="contain".
+// La rangée d'actions (♡ 💬 ✈ 🔖) est juste sous la photo du risotto.
 const TAP_TARGET = {
-  // Coordonnées du centre du halo
-  topPct: 0.72, // 72% depuis le haut du mockup
-  leftPct: 0.20, // 20% depuis la gauche du mockup
+  topPct: 0.67, // ~67% depuis le haut de l'image (rangée d'actions)
+  leftPct: 0.20, // ~20% depuis la gauche (3ème icône)
 };
 
-const HITBOX_RADIUS = 60; // 60px de rayon autour du centre du halo
+const HITBOX_RADIUS = 60;
 
 export default function DemoA2Screen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const selected = useOnboardingStore((s) => s.selectedSources);
   const [imgError, setImgError] = React.useState<boolean>(false);
   const [mockupSize, setMockupSize] = React.useState<{
     width: number;
     height: number;
   }>({ width: 0, height: 0 });
-
-  const onSkip = () => {
-    if (Platform.OS !== "web") {
-      Haptics.selectionAsync().catch(() => {});
-    }
-    navigateNextDemo(router, selected as DemoTrack[], "A");
-  };
 
   const onTapTarget = () => {
     if (Platform.OS !== "web") {
@@ -57,21 +45,47 @@ export default function DemoA2Screen() {
     router.push("/onboarding/demo-a3");
   };
 
-  // Position absolue du centre de la hitbox dans le mockup
-  const centerX = mockupSize.width * TAP_TARGET.leftPct;
-  const centerY = mockupSize.height * TAP_TARGET.topPct;
+  // Avec resizeMode="contain", l'image préserve son aspect ratio et peut laisser
+  // des bandes vides (haut/bas ou gauche/droite). On calcule la zone réelle où
+  // l'image est rendue pour y positionner précisément le halo.
+  let renderedWidth = mockupSize.width;
+  let renderedHeight = mockupSize.height;
+  let offsetX = 0;
+  let offsetY = 0;
+  if (mockupSize.width > 0 && mockupSize.height > 0) {
+    const containerAspect = mockupSize.width / mockupSize.height;
+    if (INSTA_IMG_ASPECT > containerAspect) {
+      // Image plus "large" que le container → fit en largeur, padding vertical
+      renderedWidth = mockupSize.width;
+      renderedHeight = mockupSize.width / INSTA_IMG_ASPECT;
+      offsetX = 0;
+      offsetY = (mockupSize.height - renderedHeight) / 2;
+    } else {
+      // Image plus "haute" que le container → fit en hauteur, padding horizontal
+      renderedHeight = mockupSize.height;
+      renderedWidth = mockupSize.height * INSTA_IMG_ASPECT;
+      offsetX = (mockupSize.width - renderedWidth) / 2;
+      offsetY = 0;
+    }
+  }
+
+  const centerX = offsetX + TAP_TARGET.leftPct * renderedWidth;
+  const centerY = offsetY + TAP_TARGET.topPct * renderedHeight;
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.header, { paddingTop: insets.top + 60 }]}>
-        <Reveal delay={40}>
-          <Text style={styles.step}>ÉTAPE 1 SUR 2</Text>
-        </Reveal>
-        <Reveal delay={140}>
+      <OnboardingHeader progress={progressFor("demo-intro")} onBack={() => router.back()} />
+
+      <View style={styles.header}>
+        <Reveal delay={60}>
           <Text style={styles.title}>
-            Appuie sur le bouton{" "}
-            <Text style={styles.titleAccent}>Partager</Text> du post
+            Importations{" "}
+            <Text style={styles.titleAccent}>intelligentes</Text>
+            {"\n"}depuis les réseaux sociaux
           </Text>
+        </Reveal>
+        <Reveal delay={180} style={styles.logosWrap}>
+          <SocialLogosRow size={26} gap={20} />
         </Reveal>
       </View>
 
@@ -91,7 +105,7 @@ export default function DemoA2Screen() {
             <Image
               source={INSTA_IMG}
               style={StyleSheet.absoluteFill}
-              resizeMode="cover"
+              resizeMode="contain"
               onError={() => setImgError(true)}
             />
           )}
@@ -116,7 +130,6 @@ export default function DemoA2Screen() {
               ]}
             />
 
-            {/* Halo pulsant (décoratif, pointerEvents none — la hitbox au-dessus capte) */}
             <HaloPulse
               size={56}
               position={{
@@ -125,7 +138,6 @@ export default function DemoA2Screen() {
               }}
             />
 
-            {/* Pill "Appuyez ici 👇" — positionnée juste au-dessus du halo */}
             <TapPill
               text="Appuyez ici"
               emoji="👇"
@@ -137,15 +149,6 @@ export default function DemoA2Screen() {
           </>
         )}
       </View>
-
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={12}
-        onPress={onSkip}
-        style={[styles.skipOverlay, { top: insets.top + 12 }]}
-      >
-        <Text style={styles.skipLabel}>Passer ›</Text>
-      </Pressable>
     </View>
   );
 }
@@ -155,36 +158,33 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
     alignItems: "center",
-    gap: 8,
-  },
-  step: {
-    fontFamily: "Fraunces_400Regular_Italic",
-    fontSize: 12,
-    color: Colors.terracotta,
-    letterSpacing: 1.4,
-    textTransform: "uppercase" as const,
+    gap: 14,
+    marginTop: 12,
   },
   title: {
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 18,
+    fontSize: 24,
     color: Colors.encre,
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 30,
   },
   titleAccent: {
     fontFamily: "Fraunces_400Regular_Italic",
     color: Colors.terracotta,
   },
+  logosWrap: {
+    marginTop: 4,
+  },
   mockupArea: {
     flex: 1,
-    marginTop: 24,
+    marginTop: 22,
     marginHorizontal: Spacing.screen,
     marginBottom: 24,
     position: "relative",
   },
   mockup: {
     flex: 1,
-    backgroundColor: Colors.encre,
+    backgroundColor: Colors.creme,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
@@ -193,26 +193,11 @@ const styles = StyleSheet.create({
   mockupLabel: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
-    color: Colors.creme,
+    color: Colors.cacao,
     letterSpacing: 1.2,
   },
   hitbox: {
     position: "absolute",
-    // Hitbox invisible — pas de couleur, pas de bordure
     zIndex: 15,
-  },
-  skipOverlay: {
-    position: "absolute",
-    right: Spacing.screen,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(42,37,32,0.6)",
-    zIndex: 20,
-  },
-  skipLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: Colors.creme,
   },
 });

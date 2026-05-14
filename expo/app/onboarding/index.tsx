@@ -247,7 +247,7 @@ export default function WelcomeScreen() {
         </Reveal>
         <Reveal delay={400}>
           <Text style={styles.body}>
-            L&apos;app qui rassemble toutes tes recettes au même endroit.
+            Transforme tes Reels et TikTok en vraies recettes à cuisiner.
           </Text>
         </Reveal>
       </View>

@@ -40,7 +40,7 @@ export default function Q7Screen() {
       >
         <Reveal delay={60}>
           <Text style={styles.title}>
-            Tu cuisines pour <Text style={styles.titleEm}>combien de personnes</Text> ?
+            Pour <Text style={styles.titleEm}>combien de personnes</Text> ?
           </Text>
         </Reveal>
         <Reveal delay={140}>

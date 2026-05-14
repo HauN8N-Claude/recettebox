@@ -5,6 +5,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 type CheckedState = {
   checkedByRecipe: Record<string, Record<number, boolean>>;
   toggleCheck: (recipeId: string, idx: number) => void;
+  setManyChecked: (recipeId: string, indices: number[], value: boolean) => void;
 };
 
 export const useCheckedIngredientsStore = create<CheckedState>()(
@@ -18,6 +19,20 @@ export const useCheckedIngredientsStore = create<CheckedState>()(
             checkedByRecipe: {
               ...state.checkedByRecipe,
               [recipeId]: { ...current, [idx]: !current[idx] },
+            },
+          };
+        }),
+      setManyChecked: (recipeId, indices, value) =>
+        set((state) => {
+          const current = state.checkedByRecipe[recipeId] ?? {};
+          const next = { ...current };
+          for (const idx of indices) {
+            next[idx] = value;
+          }
+          return {
+            checkedByRecipe: {
+              ...state.checkedByRecipe,
+              [recipeId]: next,
             },
           };
         }),

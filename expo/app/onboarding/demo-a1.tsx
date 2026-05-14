@@ -1,44 +1,41 @@
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Easing,
   Image,
-  Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { FontAwesome6 } from "@expo/vector-icons";
 
 import { Colors, Spacing } from "@/constants/theme";
-import {
-  OnboardingFooter,
-  OnboardingHeader,
-} from "@/components/onboarding";
+import { OnboardingHeader } from "@/components/onboarding";
+import { OnboardingFooter } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
 import { progressFor } from "@/constants/onboardingSteps";
-import { useOnboardingStore } from "@/stores/onboardingStore";
-import {
-  navigateNextDemo,
-  type DemoTrack,
-} from "@/components/onboarding/navigateNextDemo";
+import { SOCIAL_BRANDS } from "@/components/demo";
 
-const FLOATING_EMOJIS: { emoji: string; position: { top?: number; bottom?: number; left?: number; right?: number } }[] = [
-  { emoji: "📷", position: { top: -18, left: -10 } },
-  { emoji: "🎵", position: { top: 60, right: -22 } },
-  { emoji: "📌", position: { bottom: 70, left: -26 } },
-  { emoji: "📺", position: { bottom: -14, right: 14 } },
-  { emoji: "👍", position: { top: 180, right: -18 } },
+type BrandKey = (typeof SOCIAL_BRANDS)[number]["key"];
+
+const FLOATING_BRANDS: {
+  key: BrandKey;
+  position: { top?: number; bottom?: number; left?: number; right?: number };
+}[] = [
+  { key: "instagram", position: { top: -18, left: -10 } },
+  { key: "tiktok", position: { top: 60, right: -22 } },
+  { key: "pinterest", position: { bottom: 70, left: -26 } },
+  { key: "youtube", position: { bottom: -14, right: 14 } },
+  { key: "facebook", position: { top: 180, right: -18 } },
 ];
 
-function FloatingEmoji({
-  emoji,
+function FloatingBrand({
+  brandKey,
   delay,
   position,
 }: {
-  emoji: string;
+  brandKey: BrandKey;
   delay: number;
   position: { top?: number; bottom?: number; left?: number; right?: number };
 }) {
@@ -88,6 +85,9 @@ function FloatingEmoji({
     outputRange: ["-2deg", "0deg", "2deg"],
   });
 
+  const brand = SOCIAL_BRANDS.find((b) => b.key === brandKey);
+  if (!brand) return null;
+
   return (
     <Animated.View
       style={[
@@ -96,7 +96,11 @@ function FloatingEmoji({
         { transform: [{ translateY: ty }, { rotate }] },
       ]}
     >
-      <Text style={styles.floatEmoji}>{emoji}</Text>
+      <FontAwesome6
+        name={brand.icon as React.ComponentProps<typeof FontAwesome6>["name"]}
+        size={22}
+        color={brand.color}
+      />
     </Animated.View>
   );
 }
@@ -105,24 +109,11 @@ const INSTA_IMG = require("@/assets/demo/A1-instagram-post.png");
 
 export default function DemoA1Screen() {
   const router = useRouter();
-  const selected = useOnboardingStore((s) => s.selectedSources);
   const [imgError, setImgError] = React.useState<boolean>(false);
-
-  const onSkip = () => {
-    if (Platform.OS !== "web") {
-      Haptics.selectionAsync().catch(() => {});
-    }
-    navigateNextDemo(router, selected as DemoTrack[], "A");
-  };
 
   return (
     <View style={styles.wrap}>
       <OnboardingHeader progress={progressFor("demo-intro")} onBack={() => router.back()} />
-      <View style={styles.skipRow}>
-        <Pressable hitSlop={12} onPress={onSkip}>
-          <Text style={styles.skipLabel}>Passer</Text>
-        </Pressable>
-      </View>
 
       <View style={styles.center}>
         <Reveal delay={60}>
@@ -154,10 +145,10 @@ export default function DemoA1Screen() {
             )}
           </View>
 
-          {FLOATING_EMOJIS.map((f, i) => (
-            <FloatingEmoji
-              key={i}
-              emoji={f.emoji}
+          {FLOATING_BRANDS.map((f, i) => (
+            <FloatingBrand
+              key={f.key}
+              brandKey={f.key}
               delay={i * 220}
               position={f.position}
             />
@@ -175,18 +166,6 @@ export default function DemoA1Screen() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: Colors.creme },
-  skipRow: {
-    position: "absolute",
-    top: 0,
-    right: Spacing.screen,
-    paddingTop: 56,
-    zIndex: 10,
-  },
-  skipLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: Colors.cacao,
-  },
   center: {
     flex: 1,
     alignItems: "center",
@@ -249,19 +228,16 @@ const styles = StyleSheet.create({
   },
   floatChip: {
     position: "absolute",
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 999,
     backgroundColor: Colors.creme,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: Colors.encre,
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
-  },
-  floatEmoji: {
-    fontSize: 20,
   },
 });

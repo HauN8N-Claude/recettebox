@@ -7,6 +7,36 @@ import {
   hydrateOnboardingFromProfile,
   resyncIfNeeded,
 } from "@/lib/api/profile";
+import { BYPASS_AUTH, BYPASS_USER } from "@/constants/devFlags";
+
+/**
+ * Construit une fausse session + user pour le mode BYPASS_AUTH.
+ * Pas de vrai JWT — les requêtes Supabase échoueront silencieusement (RLS),
+ * mais ça suffit pour que RootGate envoie l'user sur les tabs et que les
+ * écrans qui lisent user_metadata.first_name (ex: profile.tsx) affichent
+ * quelque chose.
+ */
+function buildFakeAuthState(): { session: Session; user: User } {
+  const fakeUser = {
+    id: BYPASS_USER.id,
+    email: BYPASS_USER.email,
+    app_metadata: {},
+    user_metadata: { first_name: BYPASS_USER.first_name },
+    aud: "authenticated",
+    created_at: new Date().toISOString(),
+  } as unknown as User;
+
+  const fakeSession = {
+    access_token: "dev-fake-token",
+    refresh_token: "dev-fake-refresh",
+    expires_in: 3600 * 24 * 365,
+    expires_at: Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
+    token_type: "bearer",
+    user: fakeUser,
+  } as unknown as Session;
+
+  return { session: fakeSession, user: fakeUser };
+}
 
 type AuthState = {
   session: Session | null;
@@ -24,6 +54,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   init: () => {
     if (get()._initialized) return;
     set({ _initialized: true });
+
+    // ⚠️ DEV BYPASS — cf. constants/devFlags.ts. Injecte une fausse session
+    // au boot pour skip Login/Onboarding et atterrir direct sur les tabs.
+    // À désactiver avant tout build EAS.
+    if (BYPASS_AUTH) {
+      const fake = buildFakeAuthState();
+      set({
+        session: fake.session,
+        user: fake.user,
+        ready: true,
+      });
+      console.warn(
+        "[authStore] ⚠️ BYPASS_AUTH activé (constants/devFlags.ts). Fake user injecté, requêtes Supabase échoueront. NE PAS BUILD AVEC CE FLAG.",
+      );
+      return;
+    }
 
     supabase.auth
       .getSession()

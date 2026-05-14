@@ -58,7 +58,7 @@ export default function Q11Screen() {
       >
         <Reveal delay={60}>
           <Text style={styles.title}>
-            Qu&apos;est-ce qui te freine, vraiment&nbsp;?
+            Qu&apos;est-ce qui t&apos;embête dans ton quotidien en cuisine&nbsp;?
           </Text>
         </Reveal>
         <Reveal delay={160}>

@@ -9,44 +9,34 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors, Spacing } from "@/constants/theme";
-import { HaloPulse, TapPill } from "@/components/demo";
+import { HaloPulse, SocialLogosRow, TapPill } from "@/components/demo";
+import { OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
-import { useOnboardingStore } from "@/stores/onboardingStore";
-import {
-  navigateNextDemo,
-  type DemoTrack,
-} from "@/components/onboarding/navigateNextDemo";
+import { progressFor } from "@/constants/onboardingSteps";
 
 const SHARE_IMG = require("@/assets/demo/A3-share-instagram.png");
+const SHARE_IMG_META = Image.resolveAssetSource(SHARE_IMG);
+const SHARE_IMG_ASPECT = SHARE_IMG_META.width / SHARE_IMG_META.height;
 
 // Position de l'icône RecetteBox dans la share sheet de A3-share-instagram.png.
-// L'icône RecetteBox est la 2ème app de la rangée (après AirDrop).
+// Valeurs en % de l'IMAGE entière (pas du container) — fonctionne avec resizeMode="contain".
+// L'icône RecetteBox est la 2ème app de la rangée (après AirDrop), au milieu de la share sheet.
 const TAP_TARGET = {
-  topPct: 0.62, // 62% depuis le haut du mockup
-  leftPct: 0.28, // 28% depuis la gauche
+  topPct: 0.62, // ~62% depuis le haut de l'image (rangée des apps de partage)
+  leftPct: 0.25, // ~25% depuis la gauche (2ème icône après AirDrop)
 };
 
 const HITBOX_RADIUS = 60;
 
 export default function DemoA3Screen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const selected = useOnboardingStore((s) => s.selectedSources);
   const [imgError, setImgError] = React.useState<boolean>(false);
   const [mockupSize, setMockupSize] = React.useState<{
     width: number;
     height: number;
   }>({ width: 0, height: 0 });
-
-  const onSkip = () => {
-    if (Platform.OS !== "web") {
-      Haptics.selectionAsync().catch(() => {});
-    }
-    navigateNextDemo(router, selected as DemoTrack[], "A");
-  };
 
   const onTapTarget = () => {
     if (Platform.OS !== "web") {
@@ -55,20 +45,44 @@ export default function DemoA3Screen() {
     router.push("/onboarding/demo-a4");
   };
 
-  const centerX = mockupSize.width * TAP_TARGET.leftPct;
-  const centerY = mockupSize.height * TAP_TARGET.topPct;
+  // Avec resizeMode="contain", on calcule la zone réelle où l'image est rendue
+  // pour positionner le halo précisément sur l'icône RecetteBox.
+  let renderedWidth = mockupSize.width;
+  let renderedHeight = mockupSize.height;
+  let offsetX = 0;
+  let offsetY = 0;
+  if (mockupSize.width > 0 && mockupSize.height > 0) {
+    const containerAspect = mockupSize.width / mockupSize.height;
+    if (SHARE_IMG_ASPECT > containerAspect) {
+      renderedWidth = mockupSize.width;
+      renderedHeight = mockupSize.width / SHARE_IMG_ASPECT;
+      offsetX = 0;
+      offsetY = (mockupSize.height - renderedHeight) / 2;
+    } else {
+      renderedHeight = mockupSize.height;
+      renderedWidth = mockupSize.height * SHARE_IMG_ASPECT;
+      offsetX = (mockupSize.width - renderedWidth) / 2;
+      offsetY = 0;
+    }
+  }
+
+  const centerX = offsetX + TAP_TARGET.leftPct * renderedWidth;
+  const centerY = offsetY + TAP_TARGET.topPct * renderedHeight;
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.header, { paddingTop: insets.top + 60 }]}>
-        <Reveal delay={40}>
-          <Text style={styles.step}>ÉTAPE 2 SUR 2</Text>
-        </Reveal>
-        <Reveal delay={140}>
+      <OnboardingHeader progress={progressFor("demo-intro")} onBack={() => router.back()} />
+
+      <View style={styles.header}>
+        <Reveal delay={60}>
           <Text style={styles.title}>
-            Choisis <Text style={styles.titleAccent}>RecetteBox</Text> dans la
-            liste
+            Importations{" "}
+            <Text style={styles.titleAccent}>intelligentes</Text>
+            {"\n"}depuis les réseaux sociaux
           </Text>
+        </Reveal>
+        <Reveal delay={180} style={styles.logosWrap}>
+          <SocialLogosRow size={26} gap={20} />
         </Reveal>
       </View>
 
@@ -88,7 +102,7 @@ export default function DemoA3Screen() {
             <Image
               source={SHARE_IMG}
               style={StyleSheet.absoluteFill}
-              resizeMode="cover"
+              resizeMode="contain"
               onError={() => setImgError(true)}
             />
           )}
@@ -113,7 +127,6 @@ export default function DemoA3Screen() {
               ]}
             />
 
-            {/* Halo pulsant — décoratif */}
             <HaloPulse
               size={56}
               position={{
@@ -122,7 +135,6 @@ export default function DemoA3Screen() {
               }}
             />
 
-            {/* Pill "Appuyez ici 👇" — positionnée juste au-dessus du halo */}
             <TapPill
               text="Appuyez ici"
               emoji="👇"
@@ -134,15 +146,6 @@ export default function DemoA3Screen() {
           </>
         )}
       </View>
-
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={12}
-        onPress={onSkip}
-        style={[styles.skipOverlay, { top: insets.top + 12 }]}
-      >
-        <Text style={styles.skipLabel}>Passer ›</Text>
-      </Pressable>
     </View>
   );
 }
@@ -152,36 +155,33 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
     alignItems: "center",
-    gap: 8,
-  },
-  step: {
-    fontFamily: "Fraunces_400Regular_Italic",
-    fontSize: 12,
-    color: Colors.terracotta,
-    letterSpacing: 1.4,
-    textTransform: "uppercase" as const,
+    gap: 14,
+    marginTop: 12,
   },
   title: {
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 18,
+    fontSize: 24,
     color: Colors.encre,
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 30,
   },
   titleAccent: {
     fontFamily: "Fraunces_400Regular_Italic",
     color: Colors.terracotta,
   },
+  logosWrap: {
+    marginTop: 4,
+  },
   mockupArea: {
     flex: 1,
-    marginTop: 24,
+    marginTop: 22,
     marginHorizontal: Spacing.screen,
     marginBottom: 24,
     position: "relative",
   },
   mockup: {
     flex: 1,
-    backgroundColor: Colors.encre,
+    backgroundColor: Colors.creme,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
@@ -190,25 +190,11 @@ const styles = StyleSheet.create({
   mockupLabel: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
-    color: Colors.creme,
+    color: Colors.cacao,
     letterSpacing: 1.2,
   },
   hitbox: {
     position: "absolute",
     zIndex: 15,
-  },
-  skipOverlay: {
-    position: "absolute",
-    right: Spacing.screen,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(42,37,32,0.6)",
-    zIndex: 20,
-  },
-  skipLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: Colors.creme,
   },
 });

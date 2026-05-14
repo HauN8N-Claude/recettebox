@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   Easing,
@@ -24,10 +25,10 @@ import {
   Sparkles,
 } from "lucide-react-native";
 
-import { recipes } from "@/constants/mockData";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { PressableScale } from "@/components/PressableScale";
 import { Reveal } from "@/components/Reveal";
+import { useRecipe } from "@/lib/api/recipes";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -305,7 +306,12 @@ export default function CookingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const recipe = recipes.find((r) => r.id === id);
+  // Recette complète (avec steps) chargée depuis Supabase.
+  // Cache React Query partagé ["recipe", id] avec la fiche recette + shopping list.
+  const recipeQuery = useRecipe(id);
+  const recipe = recipeQuery.data ?? undefined;
+  const isLoading = recipeQuery.isLoading;
+  const isError = recipeQuery.isError;
 
   const [index, setIndex] = useState<number>(0);
   const [finished, setFinished] = useState<boolean>(false);
@@ -371,6 +377,26 @@ export default function CookingScreen() {
       setFinished(true);
     }
   }, [index, recipe]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centerWrap]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color={Colors.terracotta} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text style={styles.fallback}>
+          On n&apos;a pas pu charger cette recette.
+        </Text>
+      </View>
+    );
+  }
 
   if (!recipe) {
     return (
@@ -562,6 +588,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.creme,
+  },
+  centerWrap: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   fallback: {
     fontFamily: "Inter_400Regular",

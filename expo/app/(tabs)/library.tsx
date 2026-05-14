@@ -11,16 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  BookOpen,
-  Heart,
-  Instagram,
-  Link2,
-  Plus,
-  Search,
-  Sparkles,
-  X,
-} from "lucide-react-native";
+import { BookOpen, Heart, Search, X } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
@@ -185,10 +176,7 @@ export default function LibraryScreen() {
       ) : isLoading ? (
         <LoadingState />
       ) : isEmpty ? (
-        <EmptyState
-          insetsBottom={insets.bottom}
-          onImport={() => router.push("/import")}
-        />
+        <EmptyState insetsBottom={insets.bottom} />
       ) : (
         <PopulatedGrid
           list={filtered}
@@ -249,13 +237,7 @@ function DevToggle({
   );
 }
 
-function EmptyState({
-  insetsBottom,
-  onImport,
-}: {
-  insetsBottom: number;
-  onImport: () => void;
-}) {
+function EmptyState({ insetsBottom }: { insetsBottom: number }) {
   return (
     <ScrollView
       contentContainerStyle={[
@@ -273,46 +255,24 @@ function EmptyState({
             Ton carnet est encore vierge.
           </Text>
           <Text style={styles.emptyBody}>
-            Importe ta première recette — celle que tu sauves toujours sans
-            jamais la cuisiner.
+            Pour ajouter ta première recette :
           </Text>
         </View>
       </Reveal>
 
-      <Reveal delay={460}>
-        <PressableScale style={styles.primaryCta} onPress={onImport}>
-          <Plus size={18} color={Colors.creme} strokeWidth={2.2} />
-          <Text style={styles.primaryCtaText}>Importer une recette</Text>
-        </PressableScale>
-      </Reveal>
-
-      <Reveal delay={620}>
-        <Text style={[styles.systemLabel, styles.emptyLabel]}>
-          Trois façons d&apos;ajouter
-        </Text>
-      </Reveal>
-
-      <Reveal delay={760}>
-        <View style={styles.methodList}>
-          <MethodCard
-            icon={<Instagram size={18} color={Colors.terracotta} strokeWidth={1.8} />}
-            title="Coller un lien"
-            body="Instagram, TikTok, Pinterest, blog. On extrait tout."
-          />
-          <MethodCard
-            icon={<Link2 size={18} color={Colors.sauge} strokeWidth={1.8} />}
-            title="Partager depuis une app"
-            body="Bouton Partager → RecetteBox, où que tu sois."
-          />
-          <MethodCard
-            icon={<Sparkles size={18} color={Colors.miel} strokeWidth={1.8} />}
-            title="Écrire à la main"
-            body="Pour les recettes de famille, celles qui n&apos;existent qu&apos;ici."
+      <Reveal delay={500}>
+        <View style={styles.stepsList}>
+          <Step number={1} text="Ouvre Instagram ou TikTok" />
+          <Step number={2} text={"Tape « Partager » sur un post de recette"} />
+          <Step
+            number={3}
+            text={"Choisis « RecetteBox » dans la liste"}
+            highlight
           />
         </View>
       </Reveal>
 
-      <Reveal delay={920}>
+      <Reveal delay={900}>
         <View style={styles.whisperWrap}>
           <View style={styles.whisperRule} />
           <Text style={styles.whisperText}>
@@ -324,22 +284,33 @@ function EmptyState({
   );
 }
 
-function MethodCard({
-  icon,
-  title,
-  body,
+function Step({
+  number,
+  text,
+  highlight,
 }: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
+  number: number;
+  text: string;
+  highlight?: boolean;
 }) {
   return (
-    <View style={styles.methodCard}>
-      <View style={styles.methodIcon}>{icon}</View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.methodTitle}>{title}</Text>
-        <Text style={styles.methodBody}>{body}</Text>
+    <View style={styles.stepRow}>
+      <View
+        style={[
+          styles.stepBadge,
+          highlight && styles.stepBadgeHighlight,
+        ]}
+      >
+        <Text
+          style={[
+            styles.stepBadgeText,
+            highlight && styles.stepBadgeTextHighlight,
+          ]}
+        >
+          {number}
+        </Text>
       </View>
+      <Text style={styles.stepText}>{text}</Text>
     </View>
   );
 }
@@ -683,65 +654,44 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 320,
   },
-  primaryCta: {
+  stepsList: {
     marginTop: 32,
-    height: 54,
-    borderRadius: Radius.cta,
-    backgroundColor: Colors.terracotta,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
+    gap: 18,
+    paddingHorizontal: 8,
   },
-  primaryCtaText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    color: Colors.creme,
-  },
-  systemLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    letterSpacing: 1.32,
-    textTransform: "uppercase",
-    color: Colors.sauge,
-  },
-  emptyLabel: {
-    marginTop: 40,
-    marginBottom: 14,
-    textAlign: "center",
-  },
-  methodList: {
-    gap: 10,
-  },
-  methodCard: {
+  stepRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    padding: 16,
+    gap: 16,
+  },
+  stepBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: Colors.cremeDeep,
-    borderRadius: Radius.cta,
     borderWidth: 1,
     borderColor: Colors.rule,
-  },
-  methodIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.creme,
     alignItems: "center",
     justifyContent: "center",
   },
-  methodTitle: {
-    fontFamily: "Fraunces_500Medium",
-    fontSize: 16,
-    color: Colors.encre,
+  stepBadgeHighlight: {
+    backgroundColor: Colors.terracotta,
+    borderColor: Colors.terracotta,
   },
-  methodBody: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+  stepBadgeText: {
+    fontFamily: "Fraunces_500Medium",
+    fontSize: 15,
     color: Colors.cacao,
-    marginTop: 2,
-    lineHeight: 18,
+  },
+  stepBadgeTextHighlight: {
+    color: Colors.creme,
+  },
+  stepText: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: Colors.encre,
+    lineHeight: 22,
   },
   whisperWrap: {
     marginTop: 40,

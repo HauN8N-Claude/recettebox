@@ -4,7 +4,6 @@ import {
   Animated,
   PanResponder,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -23,7 +22,6 @@ const OPTIONS: { value: string; label: string }[] = [
   { value: "cuisiner", label: "Je cuisine vraiment ce que je sauve" },
   { value: "rapide", label: "Je trouve quoi cuisiner en 30 secondes" },
   { value: "decouvrir", label: "Je découvre des plats qui me ressemblent" },
-  { value: "aise", label: "Je me sens plus à l'aise en cuisine" },
 ];
 
 const ITEM_HEIGHT = 76; // 64 card height + 12 gap
@@ -136,10 +134,7 @@ export default function Q10Screen() {
   return (
     <View style={styles.wrap}>
       <OnboardingHeader progress={progressFor("q10")} onBack={() => router.back()} />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.content}>
         <Reveal delay={60}>
           <Text style={styles.title}>
             Si dans 3 mois RecetteBox a réussi son boulot, ça veut dire quoi
@@ -193,7 +188,7 @@ export default function Q10Screen() {
             })}
           </View>
         </Reveal>
-      </ScrollView>
+      </View>
       <OnboardingFooter onPress={onContinue} />
     </View>
   );
@@ -202,6 +197,7 @@ export default function Q10Screen() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: Colors.creme },
   content: {
+    flex: 1,
     paddingHorizontal: Spacing.screen,
     paddingTop: 8,
     paddingBottom: 24,

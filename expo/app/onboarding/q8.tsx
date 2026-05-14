@@ -16,7 +16,6 @@ const OPTIONS: { value: string; label: string }[] = [
   { value: "vegan", label: "Vegan" },
   { value: "sans_gluten", label: "Sans gluten" },
   { value: "sans_lactose", label: "Sans lactose" },
-  { value: "allergies", label: "Allergies" },
   { value: "autre", label: "Autre régime" },
 ];
 

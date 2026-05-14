@@ -27,6 +27,7 @@ import * as Haptics from "expo-haptics";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { useRecipe } from "@/lib/api/recipes";
+import { groupIngredients } from "@/lib/recipeFormat";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { SourceIcon } from "@/components/SourceIcon";
@@ -34,56 +35,6 @@ import { useSeenRecipesStore } from "@/stores/seenRecipesStore";
 import { useServingsStore } from "@/stores/servingsStore";
 
 const HERO_HEIGHT = 360;
-
-type IngredientCategory =
-  | "Légumes & frais"
-  | "Protéines"
-  | "Crémerie & œufs"
-  | "Épicerie";
-
-const CATEGORY_ORDER: IngredientCategory[] = [
-  "Légumes & frais",
-  "Protéines",
-  "Crémerie & œufs",
-  "Épicerie",
-];
-
-function categorize(name: string): IngredientCategory {
-  const n = name.toLowerCase();
-  if (
-    /(courgette|tomate|oignon|ail|échalote|carotte|romaine|basilic|citron|pomme|champignon|thym|coriandre|persil|poireau|salade|cannelle|wakame|alg)/.test(
-      n,
-    )
-  )
-    return "Légumes & frais";
-  if (
-    /(b(œ|oe)uf|lardon|poulet|crevette|saumon|porc|veau|jambon|poisson|tofu)/.test(
-      n,
-    )
-  )
-    return "Protéines";
-  if (/(beurre|parmesan|cr(è|e)me|lait|(œ|oe)uf|fromage|yaourt)/.test(n))
-    return "Crémerie & œufs";
-  return "Épicerie";
-}
-
-/**
- * Multiplies the leading numeric portion of an ingredient quantity
- * by a ratio while preserving the trailing unit/text.
- * Falls back to the original string when no number is found.
- */
-function scaleQuantity(qty: string, ratio: number): string {
-  const m = qty.match(/^(\d+(?:[.,]\d+)?)(.*)$/);
-  if (!m) return qty;
-  const num = parseFloat(m[1].replace(",", "."));
-  const rest = m[2];
-  const scaled = num * ratio;
-  const rounded = Math.round(scaled * 10) / 10;
-  const display = Number.isInteger(rounded)
-    ? `${rounded}`
-    : `${rounded}`.replace(".", ",");
-  return `${display}${rest}`;
-}
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -171,28 +122,10 @@ export default function RecipeDetailScreen() {
     setFavorite((f) => !f);
   }, [handleHaptic]);
 
-  const grouped = useMemo(() => {
-    if (!recipe) return [] as { cat: IngredientCategory; items: { idx: number; name: string; quantity: string }[] }[];
-    const ratio = servings / recipe.servings;
-    const buckets = new Map<
-      IngredientCategory,
-      { idx: number; name: string; quantity: string }[]
-    >();
-    recipe.ingredients.forEach((ing, idx) => {
-      const cat = categorize(ing.name);
-      const list = buckets.get(cat) ?? [];
-      list.push({
-        idx,
-        name: ing.name,
-        quantity: scaleQuantity(ing.quantity, ratio),
-      });
-      buckets.set(cat, list);
-    });
-    return CATEGORY_ORDER.filter((c) => buckets.has(c)).map((c) => ({
-      cat: c,
-      items: buckets.get(c) ?? [],
-    }));
-  }, [recipe, servings]);
+  const grouped = useMemo(
+    () => (recipe ? groupIngredients(recipe, servings) : []),
+    [recipe, servings],
+  );
 
   if (isLoading) {
     return (

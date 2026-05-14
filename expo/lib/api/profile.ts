@@ -19,7 +19,7 @@
  *   - 1 colonne jsonb fourre-tout (onboarding_raw) pour le reste du store,
  *   - 1 timestamp onboarding_completed_at.
  *
- * Voir migration recettebox-backend/supabase/migrations/0006_profiles_onboarding_fields.sql
+ * Voir migration backend/supabase/migrations/0006_profiles_onboarding_fields.sql
  * pour le schéma cible.
  */
 import { supabase } from "@/lib/supabase";

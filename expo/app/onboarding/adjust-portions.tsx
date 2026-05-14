@@ -32,7 +32,7 @@ export default function AdjustPortionsScreen() {
     }
     const t = setTimeout(() => {
       router.replace("/onboarding/q8");
-    }, 1800);
+    }, 3000);
     return () => clearTimeout(t);
   }, [router]);
 

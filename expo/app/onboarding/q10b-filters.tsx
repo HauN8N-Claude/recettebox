@@ -212,27 +212,14 @@ export default function Q10bFiltersScreen() {
     if (composed.fallback) {
       return <Text style={styles.subtitle}>Tes préférences sont notées.</Text>;
     }
-    const words = composed.subtitleWords;
-    let accentText: string;
-    if (words.length <= 3) {
-      accentText = words.map((w) => `pas de ${w}`).join(", ");
-      accentText = accentText.charAt(0).toUpperCase() + accentText.slice(1) + ".";
-    } else {
-      const first = words.slice(0, 3).map((w) => `pas de ${w}`).join(", ");
-      const remaining = words.length - 3;
-      accentText = `${first.charAt(0).toUpperCase() + first.slice(1)} + ${remaining} autre${remaining > 1 ? "s" : ""}.`;
-    }
     return (
       <Text style={styles.subtitle}>
-        <Text style={styles.subtitleAccent}>{accentText}</Text>
-        <Text> Bannis de tes propositions, pour de vrai.</Text>
+        On te préviendra si les recettes sont adaptées à ton régime. 😁
       </Text>
     );
   };
 
-  const title = composed.fallback
-    ? "On adapte tout à ta vie."
-    : "Plus jamais une recette qui te bloque.";
+  const title = "Merci d'avoir pris le temps de répondre !";
 
   const onContinue = () => {
     router.push("/onboarding/qualif-sources");
@@ -270,7 +257,7 @@ export default function Q10bFiltersScreen() {
                   <Text style={styles.cardValue}>{composed.regimeValue}</Text>
                 </View>
                 <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>VERROUILLÉ</Text>
+                  <Text style={styles.lockBadgeText}>NOTÉ</Text>
                 </View>
               </View>
             </Reveal>
@@ -285,7 +272,7 @@ export default function Q10bFiltersScreen() {
                   <Text style={styles.cardValue}>{composed.allergyCardValue}</Text>
                 </View>
                 <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>VERROUILLÉ</Text>
+                  <Text style={styles.lockBadgeText}>NOTÉ</Text>
                 </View>
               </View>
             </Reveal>

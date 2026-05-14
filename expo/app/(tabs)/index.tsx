@@ -9,13 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  ArrowRight,
-  BookOpen,
-  Calendar,
-  Plus,
-  ShoppingCart,
-} from "lucide-react-native";
+import { ArrowRight } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
@@ -25,14 +19,6 @@ import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { ProgressCurve } from "@/components/ProgressCurve";
 import { SourceIcon } from "@/components/SourceIcon";
-
-const dayNumber = () => {
-  const start = new Date(currentUser.startDate);
-  const now = new Date("2026-05-08");
-  return (
-    Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-  );
-};
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -59,8 +45,6 @@ export default function HomeScreen() {
     }
   }, [recipesQuery]);
 
-  const day = dayNumber();
-
   return (
     <ScrollView
       style={styles.scroll}
@@ -85,7 +69,6 @@ export default function HomeScreen() {
             <Text style={styles.hello}>
               Bonjour {currentUser.firstName} <Text>☀️</Text>
             </Text>
-            <Text style={styles.helloSub}>Anti-gaspi · Jour {day}</Text>
           </View>
           <PressableScale
             onPress={() => router.push("/(tabs)/profile")}
@@ -163,40 +146,6 @@ export default function HomeScreen() {
         </Reveal>
       )}
 
-      {/* QUICK ACCESS GRID */}
-      <Reveal key={`q-${revealKey}`} delay={560}>
-        <View style={styles.section}>
-          <View style={styles.quickGrid}>
-            <QuickCard
-              label="Importer"
-              icon={<Plus size={20} color={Colors.terracotta} strokeWidth={2} />}
-              onPress={() => router.push("/import")}
-            />
-            <QuickCard
-              label="Plan"
-              icon={
-                <Calendar size={20} color={Colors.sauge} strokeWidth={2} />
-              }
-              onPress={() => router.push("/(tabs)/plan")}
-            />
-            <QuickCard
-              label="Courses"
-              icon={
-                <ShoppingCart size={20} color={Colors.miel} strokeWidth={2} />
-              }
-              onPress={() => router.push("/(tabs)/shopping")}
-            />
-            <QuickCard
-              label="Bibliothèque"
-              icon={
-                <BookOpen size={20} color={Colors.cacao} strokeWidth={2} />
-              }
-              onPress={() => router.push("/(tabs)/library")}
-            />
-          </View>
-        </View>
-      </Reveal>
-
       {/* RECENTLY IMPORTED (masqué si pas assez de recettes en BD) */}
       {recentlyImported.length > 0 && (
         <Reveal key={`r-${revealKey}`} delay={740}>
@@ -263,23 +212,6 @@ export default function HomeScreen() {
   );
 }
 
-function QuickCard({
-  label,
-  icon,
-  onPress,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  onPress: () => void;
-}) {
-  return (
-    <PressableScale onPress={onPress} style={styles.quickCard}>
-      <View style={styles.quickIcon}>{icon}</View>
-      <Text style={styles.quickLabel}>{label}</Text>
-    </PressableScale>
-  );
-}
-
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
@@ -297,13 +229,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: Colors.encre,
     lineHeight: 34,
-  },
-  helloSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: Colors.cacao,
-    marginTop: 4,
-    letterSpacing: 0.2,
   },
   avatar: {
     width: 38,
@@ -445,35 +370,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: Colors.terracotta,
-  },
-
-  quickGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  quickCard: {
-    width: "48%",
-    height: 88,
-    backgroundColor: Colors.cremeDeep,
-    borderRadius: Radius.cta,
-    padding: 18,
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: Colors.rule,
-  },
-  quickIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.creme,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  quickLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    color: Colors.encre,
   },
 
   carousel: {
