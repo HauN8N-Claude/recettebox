@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useAuthStore } from "@/stores/authStore";
+import { usePendingImportStore } from "@/stores/pendingImportStore";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -62,6 +63,8 @@ function RootGate() {
   const isOnboarded = useOnboardingStore((s) => s.isOnboarded);
   const session = useAuthStore((s) => s.session);
   const ready = useAuthStore((s) => s.ready);
+  const pendingImportUrl = usePendingImportStore((s) => s.url);
+  const clearPendingImport = usePendingImportStore((s) => s.clearPendingImport);
   const segments = useSegments();
   const router = useRouter();
 
@@ -87,8 +90,20 @@ function RootGate() {
     const first = segments[0];
     const inAuth = first === "auth";
     const inOnboarding = first === "onboarding";
+    const inImport = first === "import";
+
+    // N2.1 — l'écran `import` (deep link Share Extension) gère lui-même son auth :
+    // s'il n'y a pas de session, il mémorise l'URL et redirige vers l'auth. On ne
+    // le redirige donc jamais d'ici, sinon on perdrait l'URL partagée.
+    if (inImport) return;
 
     if (session) {
+      // Un import partagé attendait la connexion : on le reprend une fois connecté.
+      if (pendingImportUrl) {
+        clearPendingImport();
+        router.replace(`/import?url=${encodeURIComponent(pendingImportUrl)}`);
+        return;
+      }
       if (inAuth || inOnboarding) {
         router.replace("/(tabs)");
       }
@@ -105,7 +120,7 @@ function RootGate() {
     if (!inOnboarding) {
       router.replace("/onboarding");
     }
-  }, [ready, session, isOnboarded, segments, router]);
+  }, [ready, session, isOnboarded, segments, router, pendingImportUrl, clearPendingImport]);
 
   return null;
 }
@@ -164,9 +179,8 @@ function RootLayoutNav() {
         name="import"
         options={{
           headerShown: false,
-          presentation: "transparentModal",
+          presentation: "fullScreenModal",
           animation: "fade",
-          contentStyle: { backgroundColor: "transparent" },
         }}
       />
       <Stack.Screen

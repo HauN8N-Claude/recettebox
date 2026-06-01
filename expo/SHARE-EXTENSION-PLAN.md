@@ -90,7 +90,7 @@
 | **Auth dans l'extension** | Aucune | L'extension fait juste un open URL, c'est l'app qui authentifie |
 | **Deep link scheme V1.0** | `recettebox://` (custom scheme) | Plus simple à mettre en place qu'Universal Links, fiable pour ce cas |
 | **Deep link V1.1+** | `https://recettebox.app/import?url=...` (Universal Links) | Quand le domaine sera acheté + AASA hébergé |
-| **App Group iOS** | `group.com.recettebox.shared` (à adapter au bundle ID final) | Convention `group.<reverse-domain>`. Nécessaire même en modèle A pour qu'iOS autorise le deep link extension→app |
+| **App Group iOS** | `group.com.recettebox.app` ✅ (acté 01/06/2026) | Convention `group.<bundle>`, aligné sur `com.recettebox.app`. Nécessaire même en modèle A pour qu'iOS autorise le deep link extension→app |
 | **Bundle ID extension** | `<bundle-app>.ShareExtension` (auto-généré par expo-share-intent) | Convention standard |
 
 ### Versions à figer
@@ -311,14 +311,16 @@ Identique iOS, sauf que :
 
 | Décision | Statut | Échéance |
 |---|---|---|
-| Bundle identifier définitif (`com.polynetia.recettebox` ou autre) | ⏳ Reportée par user | Avant N1.2 — changer après = régénération profiles Apple |
-| App Group name (proposition : `group.com.recettebox.shared`) | ⏳ À acter | Avant N2.0 — changer après = régénération profiles |
+| Bundle identifier définitif | ✅ `com.recettebox.app` (acté 28/05, cf. BUNDLE-ID-TODO.md) | Figé |
+| App Group name | ✅ `group.com.recettebox.app` (acté 01/06) | Figé — aligné sur le bundle |
 | Stratégie extension modèle A "passe-plat" | ✅ Acté dans ce doc | Décision figée |
 | Custom scheme `recettebox://` V1.0 (vs Universal Links) | ✅ Acté dans ce doc | Décision figée |
-| Android Share Extension en V1.0 (vs report V1.0.1) | ⏳ À acter | Avant N3.* |
+| Android Share Extension en V1.0 (vs report V1.0.1) | ✅ **V1.0** (acté 01/06) — un seul plugin couvre iOS+Android, build Android déjà OK | Figé |
 | Compte Apple Developer payant | 🚧 En cours user | Bloquant tout iOS |
-| Compte Expo (`eas login`) | ❌ Pas commencé | Avant N1.2 |
-| Secret EAS `EXPO_PUBLIC_SUPABASE_ANON_KEY` | ❌ Pas commencé | Avant N1.2 |
+| Compte Expo (`eas login`) | ✅ Connecté `polynetia` (cf. EAS-NEXT-STEPS.md) | Fait |
+| Secret EAS `EXPO_PUBLIC_SUPABASE_ANON_KEY` | ✅ Posé (3 environnements, cf. EAS-NEXT-STEPS.md) | Fait |
+
+> **Handler deep link (N2.1) implémenté le 01/06** : `app/import.tsx` est désormais l'endpoint du deep link (cf. annexe A5), branché sur l'Edge Function `imports` via `lib/api/imports.ts`. Reste N2.0 (poser le plugin `expo-share-intent` + config `app.json` avec l'App Group ci-dessus) pour activer le partage natif.
 
 ---
 
