@@ -13,6 +13,7 @@ import {
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
+import { Confetti } from "@/components/onboarding/Confetti";
 import { Reveal } from "@/components/Reveal";
 import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
@@ -203,6 +204,8 @@ export default function Q10bFiltersScreen() {
     return {
       subtitleWords,
       fallback,
+      hasRealDiet,
+      hasAllergies,
       regimeValue,
       allergyCardValue,
     };
@@ -245,42 +248,50 @@ export default function Q10bFiltersScreen() {
 
         <Reveal delay={240}>{renderSubtitle()}</Reveal>
 
-        {!composed.fallback && (
-          <>
-            <Reveal delay={340}>
-              <View style={[styles.card, styles.cardPriority]}>
-                <View style={[styles.cardIcon, { backgroundColor: SAUGE_SOFT }]}>
-                  <Leaf size={18} color={SAUGE_DEEP} strokeWidth={2.2} />
-                </View>
-                <View style={styles.cardTextCol}>
-                  <Text style={styles.cardLabel}>RÉGIME</Text>
-                  <Text style={styles.cardValue}>{composed.regimeValue}</Text>
-                </View>
-                <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>NOTÉ</Text>
-                </View>
+        {composed.hasRealDiet && (
+          <Reveal delay={340}>
+            <View style={[styles.card, styles.cardPriority]}>
+              <View style={[styles.cardIcon, { backgroundColor: SAUGE_SOFT }]}>
+                <Leaf size={18} color={SAUGE_DEEP} strokeWidth={2.2} />
               </View>
-            </Reveal>
-
-            <Reveal delay={420}>
-              <View style={[styles.card, styles.cardPriority, { marginTop: 12 }]}>
-                <View style={[styles.cardIcon, { backgroundColor: PINK_SOFT }]}>
-                  <ShieldHalf size={18} color={Colors.terracotta} strokeWidth={2.2} />
-                </View>
-                <View style={styles.cardTextCol}>
-                  <Text style={styles.cardLabel}>ALLERGIES</Text>
-                  <Text style={styles.cardValue}>{composed.allergyCardValue}</Text>
-                </View>
-                <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>NOTÉ</Text>
-                </View>
+              <View style={styles.cardTextCol}>
+                <Text style={styles.cardLabel}>RÉGIME</Text>
+                <Text style={styles.cardValue}>{composed.regimeValue}</Text>
               </View>
-            </Reveal>
+              <View style={styles.lockBadge}>
+                <Text style={styles.lockBadgeText}>NOTÉ</Text>
+              </View>
+            </View>
+          </Reveal>
+        )}
 
-            <Reveal delay={500}>
-              <Text style={styles.divider}>ET AUSSI</Text>
-            </Reveal>
-          </>
+        {composed.hasAllergies && (
+          <Reveal delay={420}>
+            <View
+              style={[
+                styles.card,
+                styles.cardPriority,
+                composed.hasRealDiet && { marginTop: 12 },
+              ]}
+            >
+              <View style={[styles.cardIcon, { backgroundColor: PINK_SOFT }]}>
+                <ShieldHalf size={18} color={Colors.terracotta} strokeWidth={2.2} />
+              </View>
+              <View style={styles.cardTextCol}>
+                <Text style={styles.cardLabel}>ALLERGIES</Text>
+                <Text style={styles.cardValue}>{composed.allergyCardValue}</Text>
+              </View>
+              <View style={styles.lockBadge}>
+                <Text style={styles.lockBadgeText}>NOTÉ</Text>
+              </View>
+            </View>
+          </Reveal>
+        )}
+
+        {(composed.hasRealDiet || composed.hasAllergies) && (
+          <Reveal delay={500}>
+            <Text style={styles.divider}>ET AUSSI</Text>
+          </Reveal>
         )}
 
         <Reveal delay={composed.fallback ? 340 : 560}>
@@ -335,6 +346,7 @@ export default function Q10bFiltersScreen() {
         </Reveal>
       </ScrollView>
       <OnboardingFooter onPress={onContinue} />
+      <Confetti count={40} />
     </View>
   );
 }

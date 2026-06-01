@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
 import { Colors, Spacing } from "@/constants/theme";
+import { TOTAL_STEPS } from "@/constants/onboardingSteps";
 
 type Props = {
   progress: number; // 0-1
@@ -30,6 +31,13 @@ export function OnboardingHeader({ progress, onBack, showBack = true }: Props) {
     outputRange: ["0%", "100%"],
   });
 
+  // Numéro d'étape dérivé de la valeur de progression (ex : 0.3 ≈ étape 4/14).
+  // Évite de devoir passer un id de step à chaque appel d'écran.
+  const currentStep = Math.max(
+    1,
+    Math.min(TOTAL_STEPS, Math.round(progress * TOTAL_STEPS)),
+  );
+
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
       <View style={styles.row}>
@@ -50,7 +58,7 @@ export function OnboardingHeader({ progress, onBack, showBack = true }: Props) {
         <View style={styles.barTrack}>
           <Animated.View style={[styles.barFill, { width: widthInterpolated }]} />
         </View>
-        <View style={styles.back} />
+        <Text style={styles.stepLabel}>{`${currentStep}/${TOTAL_STEPS}`}</Text>
       </View>
     </View>
   );
@@ -84,6 +92,15 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 999,
     backgroundColor: Colors.terracotta,
+  },
+  stepLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    color: Colors.cacao,
+    letterSpacing: 0.3,
+    minWidth: 32,
+    textAlign: "right",
+    opacity: 0.7,
   },
 });
 

@@ -6,6 +6,7 @@ import { Users } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
 import { Colors, Spacing } from "@/constants/theme";
+import { Confetti } from "@/components/onboarding/Confetti";
 import { Reveal } from "@/components/Reveal";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 
@@ -32,7 +33,7 @@ export default function AdjustPortionsScreen() {
     }
     const t = setTimeout(() => {
       router.replace("/onboarding/q8");
-    }, 3000);
+    }, 5000);
     return () => clearTimeout(t);
   }, [router]);
 
@@ -56,6 +57,7 @@ export default function AdjustPortionsScreen() {
           </Text>
         </Reveal>
       </View>
+      <Confetti count={40} />
     </View>
   );
 }
@@ -83,22 +85,22 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: "Fraunces_400Regular_Italic",
-    fontSize: 22,
+    fontSize: 28,
     color: Colors.encre,
     textAlign: "center",
   },
   subtitle: {
     fontFamily: "Inter_400Regular",
-    fontSize: 15,
+    fontSize: 18,
     color: Colors.cacao,
     textAlign: "center",
-    maxWidth: 300,
-    lineHeight: 22,
+    maxWidth: 330,
+    lineHeight: 26,
   },
   caption: {
     fontFamily: "Inter_400Regular",
     fontStyle: "italic",
-    fontSize: 13,
+    fontSize: 15,
     color: Colors.cacao,
     textAlign: "center",
     marginTop: 4,

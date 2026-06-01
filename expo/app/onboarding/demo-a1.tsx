@@ -158,7 +158,7 @@ export default function DemoA1Screen() {
 
       <OnboardingFooter
         label="Montre-moi comment →"
-        onPress={() => router.push("/onboarding/demo-a2")}
+        onPress={() => router.push("/onboarding/demo-pick")}
       />
     </View>
   );

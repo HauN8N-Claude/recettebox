@@ -1,6 +1,7 @@
 import React from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
@@ -21,6 +22,13 @@ export function OnboardingFooter({ label = "Continuer", disabled = false, onPres
         { paddingBottom: insets.bottom + 16 },
       ]}
     >
+      {/* Dégradé crème : fade le contenu défilé au-dessus dans le footer
+          pour mieux détacher le CTA. pointerEvents none → ne bloque rien. */}
+      <LinearGradient
+        colors={["rgba(250,246,240,0)", Colors.creme]}
+        style={styles.fade}
+        pointerEvents="none"
+      />
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled }}
@@ -51,12 +59,24 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     backgroundColor: Colors.creme,
   },
+  fade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: -50,
+    height: 50,
+  },
   cta: {
     height: 54,
     borderRadius: Radius.cta,
     backgroundColor: Colors.terracotta,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: Colors.terracotta,
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   label: {
     fontFamily: "Inter_600SemiBold",

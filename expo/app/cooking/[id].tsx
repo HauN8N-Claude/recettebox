@@ -29,6 +29,7 @@ import { Colors, Radius, Spacing } from "@/constants/theme";
 import { PressableScale } from "@/components/PressableScale";
 import { Reveal } from "@/components/Reveal";
 import { useRecipe } from "@/lib/api/recipes";
+import { PREVIEW_RECIPE } from "@/lib/devPreviewRecipe";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -308,10 +309,13 @@ export default function CookingScreen() {
   const insets = useSafeAreaInsets();
   // Recette complète (avec steps) chargée depuis Supabase.
   // Cache React Query partagé ["recipe", id] avec la fiche recette + shopping list.
-  const recipeQuery = useRecipe(id);
-  const recipe = recipeQuery.data ?? undefined;
-  const isLoading = recipeQuery.isLoading;
-  const isError = recipeQuery.isError;
+  // En mode preview (id === "preview"), on shortcut sur la recette de démo
+  // pour les captures ASO et la validation visuelle.
+  const isPreview = id === "preview";
+  const recipeQuery = useRecipe(isPreview ? undefined : id);
+  const recipe = isPreview ? PREVIEW_RECIPE : (recipeQuery.data ?? undefined);
+  const isLoading = !isPreview && recipeQuery.isLoading;
+  const isError = !isPreview && recipeQuery.isError;
 
   const [index, setIndex] = useState<number>(0);
   const [finished, setFinished] = useState<boolean>(false);

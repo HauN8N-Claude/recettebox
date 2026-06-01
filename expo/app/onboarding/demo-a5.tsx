@@ -6,15 +6,18 @@ import {
   Animated,
   Easing,
   Platform,
+  Pressable,
   ScrollView,
+  Share,
   StatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Share2 } from "lucide-react-native";
 
-import { Colors, Spacing } from "@/constants/theme";
+import { Colors, Radius, Spacing } from "@/constants/theme";
 import { OnboardingFooter } from "@/components/onboarding";
 import { Confetti } from "@/components/onboarding/Confetti";
 import { RecipeCardWow } from "@/components/demo";
@@ -25,6 +28,22 @@ import {
   navigateNextDemo,
   type DemoTrack,
 } from "@/components/onboarding/navigateNextDemo";
+
+const DEMO_RECIPE = demoRecipes.risotto;
+
+// `DemoRecipe.ingredients` est un format custom { color, text } — on utilise
+// `text` directement (déjà formaté avec quantité, ex: "320g de riz arborio").
+function buildShoppingListText(): string {
+  const cleanTitle = DEMO_RECIPE.name.replace(/\n/g, " ");
+  const lines = DEMO_RECIPE.ingredients.map((i) => `• ${i.text}`);
+  return [
+    `🛒 Liste de courses — ${cleanTitle} (${DEMO_RECIPE.portions} pers.)`,
+    "",
+    ...lines,
+    "",
+    "Générée par RecetteBox 🍳",
+  ].join("\n");
+}
 
 function Spark({
   glyph,
@@ -102,6 +121,26 @@ export default function DemoA5Screen() {
     navigateNextDemo(router, selected as DemoTrack[], "A");
   };
 
+  const onShare = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    try {
+      await Share.share({
+        message: buildShoppingListText(),
+        title: `Liste de courses — ${DEMO_RECIPE.name.replace(/\n/g, " ")}`,
+      });
+    } catch {
+      // Share annulé ou non supporté sur cette plateforme — silencieux.
+    }
+  };
+
+  const previewIngredients = DEMO_RECIPE.ingredients.slice(0, 3);
+  const remainingCount = Math.max(
+    0,
+    DEMO_RECIPE.ingredients.length - previewIngredients.length,
+  );
+
   return (
     <View style={styles.wrap}>
       <StatusBar barStyle="dark-content" />
@@ -139,7 +178,32 @@ export default function DemoA5Screen() {
         </Reveal>
 
         <Reveal delay={520} style={styles.cardWrap}>
-          <RecipeCardWow recipe={demoRecipes.risotto} />
+          <RecipeCardWow recipe={DEMO_RECIPE} />
+        </Reveal>
+
+        <Reveal delay={680} style={styles.shoppingWrap}>
+          <View style={styles.shoppingCard}>
+            <Text style={styles.shoppingLabel}>🛒 TA LISTE DE COURSES</Text>
+            <View style={styles.shoppingItems}>
+              {previewIngredients.map((ing, i) => (
+                <Text key={i} style={styles.shoppingItem}>
+                  • {ing.text}
+                </Text>
+              ))}
+              {remainingCount > 0 ? (
+                <Text style={styles.shoppingMore}>
+                  + {remainingCount} autre{remainingCount > 1 ? "s" : ""} ingrédient{remainingCount > 1 ? "s" : ""}
+                </Text>
+              ) : null}
+            </View>
+            <Pressable onPress={onShare} style={({ pressed }) => [
+              styles.shareBtn,
+              { opacity: pressed ? 0.88 : 1 },
+            ]}>
+              <Share2 size={16} color={Colors.terracotta} strokeWidth={2.2} />
+              <Text style={styles.shareBtnText}>Partager ma liste de courses</Text>
+            </Pressable>
+          </View>
         </Reveal>
       </ScrollView>
 
@@ -188,6 +252,59 @@ const styles = StyleSheet.create({
   cardWrap: {
     width: "100%",
     marginTop: 28,
+  },
+  shoppingWrap: {
+    width: "100%",
+    marginTop: 22,
+  },
+  shoppingCard: {
+    width: "100%",
+    backgroundColor: Colors.creme,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.rule,
+    padding: 18,
+    gap: 14,
+  },
+  shoppingLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: Colors.cacao,
+  },
+  shoppingItems: {
+    gap: 6,
+  },
+  shoppingItem: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: Colors.encre,
+    lineHeight: 20,
+  },
+  shoppingMore: {
+    fontFamily: "Inter_400Regular",
+    fontStyle: "italic",
+    fontSize: 13,
+    color: Colors.cacao,
+    marginTop: 2,
+  },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: Radius.cta,
+    backgroundColor: Colors.creme,
+    borderWidth: 1.5,
+    borderColor: Colors.terracotta,
+    marginTop: 2,
+  },
+  shareBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: Colors.terracotta,
+    letterSpacing: 0.2,
   },
   spark: {
     position: "absolute",

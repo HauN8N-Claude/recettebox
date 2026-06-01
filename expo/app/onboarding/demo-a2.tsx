@@ -17,8 +17,10 @@ import { Reveal } from "@/components/Reveal";
 import { progressFor } from "@/constants/onboardingSteps";
 
 const INSTA_IMG = require("@/assets/demo/A1-instagram-post.png");
-const INSTA_IMG_META = Image.resolveAssetSource(INSTA_IMG);
-const INSTA_IMG_ASPECT = INSTA_IMG_META.width / INSTA_IMG_META.height;
+const INSTA_IMG_META = Image.resolveAssetSource?.(INSTA_IMG);
+const INSTA_IMG_ASPECT = INSTA_IMG_META
+  ? INSTA_IMG_META.width / INSTA_IMG_META.height
+  : 0.8;
 
 // Position du bouton "Partager" (icône ✈) sur l'image A1-instagram-post.png.
 // Valeurs en % de l'IMAGE entière (pas du container) — fonctionne avec resizeMode="contain".

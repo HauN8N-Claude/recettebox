@@ -13,6 +13,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
   ChefHat,
@@ -27,7 +28,10 @@ import * as Haptics from "expo-haptics";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { useRecipe } from "@/lib/api/recipes";
+import { PREVIEW_RECIPE } from "@/lib/devPreviewRecipe";
 import { groupIngredients } from "@/lib/recipeFormat";
+import { computeDietWarnings } from "@/lib/dietWarnings";
+import { useOnboardingStore } from "@/stores/onboardingStore";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { SourceIcon } from "@/components/SourceIcon";
@@ -45,10 +49,13 @@ export default function RecipeDetailScreen() {
   // Cache React Query : queryKey ["recipe", id]. Indépendant du cache liste
   // ["recipes"] : ouvrir la fiche déclenche un fetch dédié (acceptable car
   // l'écran a besoin des ingredients/steps qui ne sont pas dans la liste).
-  const recipeQuery = useRecipe(id);
-  const recipe = recipeQuery.data ?? undefined;
-  const isLoading = recipeQuery.isLoading;
-  const isError = recipeQuery.isError;
+  // En mode preview (id === "preview"), on shortcut sur la recette de démo
+  // pour permettre les captures ASO et la validation visuelle.
+  const isPreview = id === "preview";
+  const recipeQuery = useRecipe(isPreview ? undefined : id);
+  const recipe = isPreview ? PREVIEW_RECIPE : (recipeQuery.data ?? undefined);
+  const isLoading = !isPreview && recipeQuery.isLoading;
+  const isError = !isPreview && recipeQuery.isError;
 
   const markAsSeen = useSeenRecipesStore((s) => s.markAsSeen);
   useEffect(() => {
@@ -61,6 +68,9 @@ export default function RecipeDetailScreen() {
     (s) => s.servingsByRecipe[recipeId] ?? defaultServings,
   );
   const setServingsInStore = useServingsStore((s) => s.setServings);
+  const allergies = useOnboardingStore((s) => s.allergies);
+  const dietary = useOnboardingStore((s) => s.q8_restrictions);
+  const customExclusions = useOnboardingStore((s) => s.customExclusions);
   const [favorite, setFavorite] = useState<boolean>(
     recipe?.isFavorite ?? false,
   );
@@ -125,6 +135,18 @@ export default function RecipeDetailScreen() {
   const grouped = useMemo(
     () => (recipe ? groupIngredients(recipe, servings) : []),
     [recipe, servings],
+  );
+
+  const dietWarnings = useMemo(
+    () =>
+      recipe
+        ? computeDietWarnings(recipe.ingredients, {
+            allergies,
+            dietary,
+            customExclusions,
+          })
+        : [],
+    [recipe, allergies, dietary, customExclusions],
   );
 
   if (isLoading) {
@@ -328,6 +350,31 @@ export default function RecipeDetailScreen() {
             )}
           </View>
         </Reveal>
+
+        {/* Alerte régime / allergies */}
+        {dietWarnings.length > 0 && (
+          <Reveal delay={420}>
+            <View style={styles.dietWarning}>
+              <AlertTriangle
+                size={18}
+                color={Colors.terracotta}
+                strokeWidth={2.2}
+              />
+              <View style={styles.dietWarningTextCol}>
+                <Text style={styles.dietWarningTitle}>
+                  À vérifier pour ton régime
+                </Text>
+                <Text style={styles.dietWarningBody}>
+                  Cette recette semble contenir{" "}
+                  {dietWarnings
+                    .map((w) => `${w.reason} (${w.ingredients.join(", ")})`)
+                    .join(", ")}
+                  .
+                </Text>
+              </View>
+            </View>
+          </Reveal>
+        )}
 
         {/* Ingredients */}
         <Reveal delay={460}>
@@ -630,6 +677,35 @@ const styles = StyleSheet.create({
     height: 28,
     backgroundColor: Colors.rule,
     marginHorizontal: 8,
+  },
+
+  dietWarning: {
+    marginHorizontal: Spacing.screen,
+    marginTop: Spacing.section,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+    backgroundColor: Colors.cremeDeep,
+    borderWidth: 1.5,
+    borderColor: Colors.terracotta,
+    borderRadius: Radius.card,
+    padding: 16,
+  },
+  dietWarningTextCol: {
+    flex: 1,
+  },
+  dietWarningTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.terracotta,
+    marginBottom: 4,
+    letterSpacing: 0.2,
+  },
+  dietWarningBody: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: Colors.encre,
+    lineHeight: 20,
   },
 
   section: {

@@ -81,11 +81,21 @@ export default function ImportProcessingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [importRow, setImportRow] = useState<ImportRow | null>(null);
+  // Mode preview (id === "preview") : utilisé pour les captures ASO et la
+  // validation visuelle de l'écran. On force un état "extracting" (étape
+  // mi-parcours, visuellement riche) sans appel Supabase ni Realtime.
+  const isPreview = jobId === "preview";
+
+  const [importRow, setImportRow] = useState<ImportRow | null>(
+    isPreview
+      ? { id: "preview", status: "extracting", recipe_id: null, error_message: null }
+      : null,
+  );
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Fetch initial + subscription Realtime à la table imports filtrée sur jobId.
   useEffect(() => {
+    if (isPreview) return;
     if (!jobId) return;
     let cancelled = false;
 
@@ -130,11 +140,14 @@ export default function ImportProcessingScreen() {
   }, [jobId]);
 
   // Auto-redirect dès que la recette est prête.
+  // On passe par l'écran de révélation (qui enchaîne ensuite révélation → aha
+  // → fiche), pas directement sur la fiche brute, pour préserver l'effet "wow".
   useEffect(() => {
+    if (isPreview) return;
     if (importRow?.status === "done" && importRow.recipe_id) {
-      router.replace(`/recipe/${importRow.recipe_id}`);
+      router.replace(`/recipe/reveal/${importRow.recipe_id}`);
     }
-  }, [importRow, router]);
+  }, [importRow, router, isPreview]);
 
   const close = () => {
     // router.back si possible, sinon retour à la home (cas deep-link froid).

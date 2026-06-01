@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.xg9kqzo329589e398hye3"
+      "bundleIdentifier": "com.recettebox.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.xg9kqzo329589e398hye3"
+      "package": "com.recettebox.app"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -35,6 +35,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c848d9e2-c51b-44a4-8ea1-23cc46ae242a"
+      }
+    },
+    "owner": "polynetia"
   }
 }

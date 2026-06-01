@@ -3,19 +3,21 @@
  *
  * Affiché juste après qu'une recette ait été générée par le worker. Joue une
  * courte animation (~3s) où le post Instagram/TikTok d'origine se transforme
- * en la fiche recette structurée, puis propose un CTA "Découvrir la recette"
- * qui route (replace) vers /recipe/[id].
+ * en la fiche recette structurée, puis propose un CTA qui route (replace) vers
+ * /recipe/aha/[id] (liste de courses), puis la fiche.
  *
- * Étape 1 (visuel seul) : accessible manuellement via /recipe/reveal/<id> pour
- * juger le rendu. Pas encore branché au flow d'import — viendra en étape 2.
+ * Branché au flow d'import : l'écran d'attente (import/processing/[jobId])
+ * redirige ici dès que l'import est terminé. `/recipe/reveal/preview` reste
+ * accessible pour juger le rendu sur des données de démo.
  */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   Easing,
   Image,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -76,6 +78,15 @@ export default function ImportRevealScreen() {
   const isPreview = id === "preview";
   const recipeQuery = useRecipe(isPreview ? undefined : id);
   const recipe = isPreview ? PREVIEW_RECIPE : recipeQuery.data;
+
+  // Filet de sécurité : si la vraie recette ne charge pas (réseau, droits…),
+  // on évite de laisser tourner la roue indéfiniment et on offre une sortie.
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
+  useEffect(() => {
+    if (isPreview || recipe) return;
+    const t = setTimeout(() => setLoadTimedOut(true), 6000);
+    return () => clearTimeout(t);
+  }, [isPreview, recipe]);
 
   // Crossfade vignette du post (visible au départ) → photo de la recette.
   const vignetteOpacity = useRef(new Animated.Value(0)).current;
@@ -139,6 +150,32 @@ export default function ImportRevealScreen() {
       router.replace(`/recipe/aha/${recipe.id}`);
     }
   };
+
+  if (!isPreview && !recipe && (recipeQuery.isError || loadTimedOut)) {
+    return (
+      <View style={[styles.loading, styles.errorWrap]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text style={styles.errorTitle}>
+          On n&apos;a pas pu afficher la recette.
+        </Text>
+        <PressableScale
+          onPress={() => {
+            setLoadTimedOut(false);
+            recipeQuery.refetch();
+          }}
+          style={[styles.cta, styles.errorCta]}
+        >
+          <Text style={styles.ctaText}>Réessayer</Text>
+        </PressableScale>
+        <Pressable
+          onPress={() => router.replace("/(tabs)")}
+          style={styles.errorSecondary}
+        >
+          <Text style={styles.errorSecondaryText}>Revenir à l&apos;accueil</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if ((!isPreview && recipeQuery.isLoading) || !recipe) {
     return (
@@ -261,6 +298,18 @@ export default function ImportRevealScreen() {
           <ArrowRight size={18} color={Colors.creme} strokeWidth={2.2} />
         </PressableScale>
       </Reveal>
+
+      {isPreview && (
+        <Reveal delay={3100} style={styles.devLinkWrap}>
+          <Pressable
+            onPress={() => router.push("/paywall")}
+            hitSlop={8}
+            accessibilityRole="link"
+          >
+            <Text style={styles.devLinkText}>Voir le paywall (dev)</Text>
+          </Pressable>
+        </Reveal>
+      )}
     </View>
   );
 }
@@ -288,6 +337,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.creme,
+  },
+  errorWrap: {
+    paddingHorizontal: Spacing.screen,
+  },
+  errorTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 17,
+    color: Colors.encre,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  errorCta: {
+    alignSelf: "stretch",
+    paddingHorizontal: 28,
+  },
+  errorSecondary: {
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  errorSecondaryText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: Colors.cacao,
+    textDecorationLine: "underline",
   },
 
   topGroup: {
@@ -440,5 +513,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.creme,
     letterSpacing: 0.2,
+  },
+
+  // DEV ONLY — accès rapide au paywall depuis l'écran preview.
+  devLinkWrap: {
+    marginTop: 14,
+    alignSelf: "center",
+  },
+  devLinkText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: Colors.cacao,
+    opacity: 0.55,
+    textDecorationLine: "underline",
   },
 });

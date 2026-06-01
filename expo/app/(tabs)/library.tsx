@@ -106,7 +106,7 @@ export default function LibraryScreen() {
                   : `${recipes.length} recettes sauvées`}
               </Text>
             </View>
-            <DevToggle mode={mode} onToggle={toggleMode} />
+            {__DEV__ ? <DevToggle mode={mode} onToggle={toggleMode} /> : null}
           </View>
         </Reveal>
 

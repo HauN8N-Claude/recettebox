@@ -17,8 +17,10 @@ import { Reveal } from "@/components/Reveal";
 import { progressFor } from "@/constants/onboardingSteps";
 
 const SHARE_IMG = require("@/assets/demo/A3-share-instagram.png");
-const SHARE_IMG_META = Image.resolveAssetSource(SHARE_IMG);
-const SHARE_IMG_ASPECT = SHARE_IMG_META.width / SHARE_IMG_META.height;
+const SHARE_IMG_META = Image.resolveAssetSource?.(SHARE_IMG);
+const SHARE_IMG_ASPECT = SHARE_IMG_META
+  ? SHARE_IMG_META.width / SHARE_IMG_META.height
+  : 0.8;
 
 // Position de l'icône RecetteBox dans la share sheet de A3-share-instagram.png.
 // Valeurs en % de l'IMAGE entière (pas du container) — fonctionne avec resizeMode="contain".

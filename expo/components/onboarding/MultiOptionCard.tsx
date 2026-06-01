@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Platform,
@@ -22,6 +22,30 @@ type Props = {
 
 export function MultiOptionCard({ label, selected, onPress, description, leading }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
+  // Pop animation indépendante du scale de press : se déclenche quand l'option
+  // passe de non-sélectionnée à sélectionnée. Empilée via transform stacking.
+  const popScale = useRef(new Animated.Value(1)).current;
+  const prevSelected = useRef(selected);
+
+  useEffect(() => {
+    if (selected && !prevSelected.current) {
+      Animated.sequence([
+        Animated.spring(popScale, {
+          toValue: 1.04,
+          useNativeDriver: true,
+          speed: 40,
+          bounciness: 8,
+        }),
+        Animated.spring(popScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 30,
+          bounciness: 6,
+        }),
+      ]).start();
+    }
+    prevSelected.current = selected;
+  }, [selected, popScale]);
 
   return (
     <Pressable
@@ -54,7 +78,7 @@ export function MultiOptionCard({ label, selected, onPress, description, leading
         style={[
           styles.card,
           selected ? styles.cardActive : styles.cardInactive,
-          { transform: [{ scale }] },
+          { transform: [{ scale }, { scale: popScale }] },
         ]}
       >
         <View

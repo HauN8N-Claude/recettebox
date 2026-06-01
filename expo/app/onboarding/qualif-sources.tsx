@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { BookMarked, Check, Globe, Instagram, Music2, Bookmark } from "lucide-react-native";
+import { Check, Instagram, Music2, Bookmark } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import {
   Animated,
@@ -41,22 +41,6 @@ const CARDS: CardConfig[] = [
         <Bookmark size={16} color={color} strokeWidth={1.8} />
       </View>
     ),
-  },
-  {
-    value: "web",
-    label: "Sites web ou blogs",
-    sublabel: "Marmiton, blogs, magazines en ligne…",
-    accent: Colors.sauge,
-    comingSoon: true,
-    renderTrailing: (color) => <Globe size={20} color={color} strokeWidth={1.8} />,
-  },
-  {
-    value: "manuscript",
-    label: "Recettes manuscrites ou imprimées",
-    sublabel: "Carnet de famille, livre de cuisine, photo de magazine…",
-    accent: Colors.miel,
-    comingSoon: true,
-    renderTrailing: (color) => <BookMarked size={20} color={color} strokeWidth={1.8} />,
   },
 ];
 
@@ -149,21 +133,12 @@ export default function QualifSourcesScreen() {
   // suivantes (utilisateur revenant déjà connecté). Le fallback ci-dessous
   // gère le premier passage.
   const firstName = useOnboardingStore((s) => s.q14_firstName);
-  const stored = useOnboardingStore((s) => s.q3_sources_demo);
   const setAnswer = useOnboardingStore((s) => s.setAnswer);
-  const [selected, setSelected] = useState<DemoParcours[]>(
-    (stored ?? []).filter((s) => s === "social")
-  );
-
-  const toggle = (value: DemoParcours) => {
-    if (value !== "social") return;
-    setSelected((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
-  };
+  // V1.0 : une seule source — les réseaux sociaux. Plus de choix à faire :
+  // la carte est pré-sélectionnée et le bouton « Continuer » toujours actif.
+  const [selected] = useState<DemoParcours[]>(["social"]);
 
   const onContinue = () => {
-    if (selected.length === 0) return;
     setAnswer("q3_sources_demo", selected);
     navigateNextDemo(router, selected);
   };
@@ -185,10 +160,10 @@ export default function QualifSourcesScreen() {
           </Text>
         </Reveal>
         <Reveal delay={180}>
-          <Text style={styles.subtitle}>D&apos;où viennent tes recettes ?</Text>
-        </Reveal>
-        <Reveal delay={240}>
-          <Text style={styles.subtitleMuted}>Plusieurs choix possibles.</Text>
+          <Text style={styles.subtitle}>
+            RecetteBox importe tes recettes directement depuis tes réseaux
+            sociaux.
+          </Text>
         </Reveal>
 
         <View style={styles.cards}>
@@ -197,7 +172,7 @@ export default function QualifSourcesScreen() {
               <SourceCard
                 cfg={cfg}
                 selected={selected.includes(cfg.value)}
-                onPress={() => toggle(cfg.value)}
+                onPress={() => {}}
               />
             </Reveal>
           ))}

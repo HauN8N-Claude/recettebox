@@ -1,6 +1,22 @@
-import { useRouter } from "expo-router";
+/**
+ * Paywall in-app — déclenché depuis le profil ou quand un user free atteint
+ * son quota de 3 imports à vie (cf. Edge Function imports/ code QUOTA_FREE_REACHED).
+ *
+ * UI clonée de app/onboarding/paywall-compare.tsx pour la cohérence visuelle.
+ * Différences avec la version onboarding :
+ *   - bouton de fermeture (X) en haut à droite
+ *   - CTA "Commencer Premium" ouvre une alerte "bientôt" en V1.0 (le branchement
+ *     RevenueCat / StoreKit viendra en Phase C, après obtention du compte
+ *     Apple Developer)
+ *   - dismiss → router.back()
+ *
+ * TODO Phase C : extraire le contenu commun avec paywall-compare en un
+ * composant <PaywallContent /> partagé, et brancher l'achat in-app réel.
+ */
+import { Stack, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -9,13 +25,12 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Check } from "lucide-react-native";
+import { Check, X } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
-import { OnboardingFooter } from "@/components/onboarding";
+import { PressableScale } from "@/components/PressableScale";
 import { Reveal } from "@/components/Reveal";
-import { useOnboardingStore } from "@/stores/onboardingStore";
 
 type PlanId = "weekly" | "monthly" | "annual" | "lifetime";
 
@@ -43,36 +58,61 @@ const PLANS: Plan[] = [
 ];
 
 const BENEFITS = [
-  "3 imports gratuits pour découvrir",
   "Imports illimités depuis TikTok & Instagram",
   "Liste de courses générée automatiquement",
   "Toutes tes recettes synchronisées",
 ];
 
-export default function PaywallCompareScreen() {
+export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const finish = useOnboardingStore((s) => s.finish);
   const [selected, setSelected] = useState<PlanId>("annual");
 
-  const select = (id: PlanId) => {
+  const haptic = (style: Haptics.ImpactFeedbackStyle) => {
     if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      Haptics.impactAsync(style).catch(() => {});
     }
+  };
+
+  const select = (id: PlanId) => {
+    haptic(Haptics.ImpactFeedbackStyle.Light);
     setSelected(id);
   };
 
+  const close = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
   const onContinue = () => {
-    // P1.7 : on marque l'onboarding fini et on bascule vers le signup.
-    // Le branchement RevenueCat / achat in-app viendra en P3.x ; pour V1.0
-    // le CTA crée un compte free, l'utilisateur pourra passer Premium depuis
-    // son profil quand le paiement sera branché.
-    finish();
-    router.replace("/auth/signup");
+    haptic(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "L'achat Premium arrive très vite",
+      "On est en phase finale d'intégration. Pour devenir beta-testeur, contacte-nous via ton profil. Merci de ton intérêt !",
+      [{ text: "OK" }],
+    );
   };
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 16 }]}>
+    <View style={[styles.wrap, { paddingTop: insets.top + 12 }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Top bar avec close X */}
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={close}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Fermer"
+          style={styles.closeBtn}
+        >
+          <X size={20} color={Colors.encre} strokeWidth={2} />
+        </Pressable>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -160,21 +200,44 @@ export default function PaywallCompareScreen() {
             réglages de ton compte App Store.
           </Text>
         </Reveal>
-
-        <Reveal delay={860}>
-          <Text style={styles.helper}>
-            Tu pourras passer Premium quand tu veux depuis ton profil.
-          </Text>
-        </Reveal>
       </ScrollView>
 
-      <OnboardingFooter label="Commencer" onPress={onContinue} />
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 22 },
+        ]}
+      >
+        <PressableScale
+          onPress={onContinue}
+          style={styles.cta}
+          scaleTo={0.97}
+          haptic={false}
+        >
+          <Text style={styles.ctaText}>Commencer Premium</Text>
+        </PressableScale>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: Colors.creme },
+  topBar: {
+    paddingHorizontal: Spacing.screen,
+    paddingBottom: 8,
+    alignItems: "flex-end",
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.cremeDeep,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.rule,
+  },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingBottom: 24,
@@ -315,13 +378,26 @@ const styles = StyleSheet.create({
     color: Colors.cacao,
     textAlign: "center",
   },
-  helper: {
-    marginTop: 14,
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    lineHeight: 16,
-    color: Colors.cacao,
-    textAlign: "center",
-    opacity: 0.85,
+  footer: {
+    paddingHorizontal: Spacing.screen,
+    paddingTop: 12,
+  },
+  cta: {
+    height: 56,
+    borderRadius: Radius.cta,
+    backgroundColor: Colors.terracotta,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.encre,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  ctaText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: Colors.creme,
+    letterSpacing: 0.2,
   },
 });

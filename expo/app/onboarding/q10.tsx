@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  Easing,
   PanResponder,
   Platform,
   StyleSheet,
@@ -62,6 +63,58 @@ export default function Q10Screen() {
   ).current;
 
   const startIndexMap = useRef<Record<string, number>>({}).current;
+
+  // Hint "doigt" : suggère de glisser pour ranger (de l'item 4 vers l'item 1).
+  const [hintVisible, setHintVisible] = useState<boolean>(true);
+  const fingerY = useRef(new Animated.Value(3 * ITEM_HEIGHT + 10)).current;
+  const fingerOpacity = useRef(new Animated.Value(0)).current;
+  const hintLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(fingerY, {
+          toValue: 3 * ITEM_HEIGHT + 10,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fingerOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.delay(280),
+        Animated.timing(fingerY, {
+          toValue: 10,
+          duration: 1100,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.delay(180),
+        Animated.timing(fingerOpacity, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.delay(450),
+      ])
+    );
+    hintLoopRef.current = loop;
+    const t = setTimeout(() => {
+      loop.start();
+    }, 650);
+    return () => {
+      clearTimeout(t);
+      loop.stop();
+    };
+  }, [fingerOpacity, fingerY]);
+
+  useEffect(() => {
+    if (draggedId) {
+      hintLoopRef.current?.stop();
+      setHintVisible(false);
+    }
+  }, [draggedId]);
 
   const responders = useMemo(() => {
     const map: Record<string, ReturnType<typeof PanResponder.create>> = {};
@@ -186,6 +239,22 @@ export default function Q10Screen() {
                 </Animated.View>
               );
             })}
+
+            {hintVisible && (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.fingerHint,
+                  {
+                    opacity: fingerOpacity,
+                    transform: [{ translateY: fingerY }],
+                  },
+                ]}
+              >
+                <View style={styles.fingerCircle} />
+                <Text style={styles.fingerEmoji}>👆</Text>
+              </Animated.View>
+            )}
           </View>
         </Reveal>
       </View>
@@ -267,5 +336,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.encre,
     lineHeight: 20,
+  },
+  fingerHint: {
+    position: "absolute",
+    right: 14,
+    top: 0,
+    width: 46,
+    height: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 30,
+  },
+  fingerCircle: {
+    position: "absolute",
+    width: 46,
+    height: 46,
+    borderRadius: 999,
+    backgroundColor: Colors.terracotta,
+    opacity: 0.22,
+  },
+  fingerEmoji: {
+    fontSize: 26,
   },
 });

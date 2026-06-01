@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles, ChevronRight } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
@@ -38,6 +39,7 @@ function comingSoonAlert(title: string, body: string) {
 
 export function SubscriptionCard() {
   const { user } = useAuth();
+  const router = useRouter();
   const userId = user?.id;
 
   const { data, isLoading, isError } = useQuery({
@@ -58,10 +60,7 @@ export function SubscriptionCard() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
-    comingSoonAlert(
-      "Bientôt disponible",
-      "L'abonnement Premium arrive très vite. On te tient au courant !",
-    );
+    router.push("/paywall");
   };
 
   const onTapManageSubscription = () => {

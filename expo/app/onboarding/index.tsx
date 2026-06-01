@@ -250,6 +250,9 @@ export default function WelcomeScreen() {
             Transforme tes Reels et TikTok en vraies recettes à cuisiner.
           </Text>
         </Reveal>
+        <Reveal delay={500}>
+          <Text style={styles.duration}>≈ 2 minutes pour personnaliser ton expérience</Text>
+        </Reveal>
       </View>
 
       <Reveal delay={560} style={styles.footer}>
@@ -395,6 +398,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 23,
     maxWidth: "86%",
+  },
+  duration: {
+    fontFamily: "Fraunces_400Regular_Italic",
+    fontSize: 13,
+    color: Colors.cacao,
+    textAlign: "center",
+    opacity: 0.7,
+    marginTop: 8,
   },
   footer: {
     gap: 14,

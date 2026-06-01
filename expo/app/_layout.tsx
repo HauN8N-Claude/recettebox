@@ -36,7 +36,7 @@ SplashScreen.preventAutoHideAsync();
 // Quand `true` : au démarrage de l'app, on saute login/onboarding et on route
 // direct vers /recipe/reveal/preview pour juger le rendu sur Expo Go.
 // Basculer sur `false` pour revenir au flow normal de l'app.
-const DEV_PREVIEW_REVEAL = true;
+const DEV_PREVIEW_REVEAL = false;
 
 // Silence a known react-native-web warning where some internal Animated.View
 // components leak the RN-only `collapsable` prop down to the DOM. It is
@@ -68,11 +68,17 @@ function RootGate() {
   useEffect(() => {
     if (!ready) return;
 
+    // ASO capture escape — laisser passer les routes /.../preview (écrans d'aperçu démo)
+    // pour pouvoir générer les screenshots App Store sans completer onboarding+auth.
+    // Inoffensif en prod : aucun vrai id n'a la valeur littérale "preview".
+    if (segments[segments.length - 1] === "preview") return;
+
     if (DEV_PREVIEW_REVEAL) {
       // `useSegments()` renvoie le pattern de route (`[id]`), pas l'URL réelle.
-      // On laisse passer toute la branche /recipe/* en preview (révélation, aha, fiche).
-      const onRecipeRoute = segments[0] === "recipe";
-      if (!onRecipeRoute) {
+      // On laisse passer la branche /recipe/* (révélation, aha, fiche) ET /paywall
+      // pour pouvoir valider l'enchaînement visuel des écrans en mode preview.
+      const allowed = segments[0] === "recipe" || segments[0] === "paywall";
+      if (!allowed) {
         router.replace("/recipe/reveal/preview");
       }
       return;
@@ -136,6 +142,14 @@ function RootLayoutNav() {
         options={{
           headerShown: false,
           animation: "fade",
+        }}
+      />
+      <Stack.Screen
+        name="paywall"
+        options={{
+          headerShown: false,
+          presentation: "modal",
+          animation: "slide_from_bottom",
         }}
       />
       <Stack.Screen

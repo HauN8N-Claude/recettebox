@@ -1,6 +1,10 @@
-# ⚠️ TODO — Choisir le bundle identifier définitif
+# ✅ RÉSOLU — Bundle identifier choisi : `com.recettebox.app`
 
-**Statut au 14/05/2026 :** `app.json` contient encore le bundle/package généré par Rork :
+> **28/05/2026 — TRANCHÉ.** Le bundle ID définitif est **`com.recettebox.app`** (choix du user), posé dans `app.json` (`ios.bundleIdentifier` + `android.package`). Le placeholder Rork a été supprimé. **Rien à faire de plus.** Le reste de ce fichier est conservé pour l'historique.
+
+---
+
+**(Historique) Statut au 14/05/2026 :** `app.json` contenait encore le bundle/package généré par Rork :
 
 ```
 ios.bundleIdentifier  = app.rork.xg9kqzo329589e398hye3

@@ -5,6 +5,7 @@ import { Users } from "lucide-react-native";
 
 import { Colors, Spacing } from "@/constants/theme";
 import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
+import { Confetti } from "@/components/onboarding/Confetti";
 import { Reveal } from "@/components/Reveal";
 import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
@@ -36,14 +37,14 @@ export default function Q11bProfileScreen() {
 
   return (
     <View style={styles.wrap}>
-      <OnboardingHeader progress={progressFor("q11b-profile")} onBack={() => router.back()} />
+      <OnboardingHeader progress={progressFor("q11b-profile")} showBack={false} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <Reveal delay={60}>
           <Text style={styles.intro}>
-            D&apos;accord, je comprends, je vois que&nbsp;:
+            On te comprend tellement&nbsp;! En ce moment&nbsp;:
           </Text>
         </Reveal>
 
@@ -60,7 +61,8 @@ export default function Q11bProfileScreen() {
 
         <Reveal delay={320}>
           <Text style={styles.closing}>
-            Mais nous sommes là pour <Text style={styles.closingAccent}>t&apos;aider</Text>&nbsp;!
+            Et la bonne nouvelle&nbsp;? Tout ça, on va le{" "}
+            <Text style={styles.closingAccent}>transformer ensemble</Text>. 💛
           </Text>
         </Reveal>
 
@@ -77,6 +79,7 @@ export default function Q11bProfileScreen() {
         </Reveal>
       </ScrollView>
       <OnboardingFooter label="On continue" onPress={onContinue} />
+      <Confetti count={40} />
     </View>
   );
 }

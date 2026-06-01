@@ -92,7 +92,10 @@ export default function SignupScreen() {
       // Ne bloque pas la navigation : si ca echoue, B6.3 rejouera au prochain
       // demarrage en regardant profiles.onboarding_completed_at.
       void syncOnboardingProfile(useOnboardingStore.getState()).catch(() => {});
-      router.replace("/(tabs)");
+      // Première utilisation : on atterrit sur la Bibliothèque vide (empty
+      // state avec les 3 étapes « Ouvre Insta → Partager → RecetteBox »)
+      // plutôt que sur l'Accueil — c'est l'action concrète à faire en premier.
+      router.replace("/(tabs)/library");
       return;
     }
 
