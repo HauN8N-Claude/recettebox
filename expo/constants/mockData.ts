@@ -404,7 +404,9 @@ export const demoRecipes: Record<"risotto" | "tarteFigues" | "blanquette", DemoR
     name: "Risotto crémeux\naux champignons",
     source: "@marlene.cooks · Instagram",
     portions: 4,
-    image: require("../assets/demo/A1-instagram-post.png") as ImageSourcePropType,
+    // Photo du plat recadrée depuis A1-instagram-post.png (le screenshot complet
+    // affichait la barre d'état + l'en-tête IG via cover sur la carte recette).
+    image: require("../assets/demo/A1-risotto-food.png") as ImageSourcePropType,
     fallback: { emoji: "🍚", gradient: ["#C8654A", "#6B4423"] },
     ingredients: [
       { color: "miel", text: "320g de riz arborio" },

@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cremeDeep,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   photoLabel: {
     fontFamily: "Inter_600SemiBold",
