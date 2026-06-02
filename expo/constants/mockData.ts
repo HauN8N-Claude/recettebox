@@ -422,7 +422,9 @@ export const demoRecipes: Record<"risotto" | "tarteFigues" | "blanquette", DemoR
     badge: "Sans pubs",
     badgeColor: "sauge",
     badgeIcon: "check",
-    image: require("../assets/demo/B1-safari-marmiton.png") as ImageSourcePropType,
+    // Photo du plat recadrée depuis B1-safari-marmiton.png (le screenshot
+    // complet affichait la barre d'URL Safari via cover sur la carte recette).
+    image: require("../assets/demo/B1-tarte-food.png") as ImageSourcePropType,
     ingredients: [
       { color: "miel", text: "1 pâte feuilletée" },
       { color: "terracotta", text: "8 figues fraîches mûres" },
@@ -438,7 +440,9 @@ export const demoRecipes: Record<"risotto" | "tarteFigues" | "blanquette", DemoR
     badge: "Manuscrit",
     badgeColor: "miel",
     badgeIcon: "check",
-    image: require("../assets/demo/C1-camera-manuscrit.png") as ImageSourcePropType,
+    // Carnet manuscrit recadré depuis C1-camera-manuscrit.png (le screenshot
+    // complet affichait l'UI caméra via cover sur la carte recette).
+    image: require("../assets/demo/C1-manuscrit-photo.png") as ImageSourcePropType,
     fallback: { emoji: "🍲", gradient: ["#E8B86A", "#5C4A3A"] },
     ingredients: [
       { color: "cacao", text: "800g d'épaule de veau" },
