@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
+import { ShareIntentProvider } from "expo-share-intent";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useAuthStore } from "@/stores/authStore";
 import { usePendingImportStore } from "@/stores/pendingImportStore";
+import { SKIP_LOGIN_AFTER_ONBOARDING } from "@/constants/devFlags";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -65,6 +67,7 @@ function RootGate() {
   const ready = useAuthStore((s) => s.ready);
   const pendingImportUrl = usePendingImportStore((s) => s.url);
   const clearPendingImport = usePendingImportStore((s) => s.clearPendingImport);
+  const enterGuest = useAuthStore((s) => s.enterGuest);
   const segments = useSegments();
   const router = useRouter();
 
@@ -111,6 +114,12 @@ function RootGate() {
     }
 
     if (isOnboarded) {
+      // Dev — onboarding terminé : on entre en session invitée au lieu d'exiger
+      // un login (test « onboarding complet + accueil » sans auth).
+      if (SKIP_LOGIN_AFTER_ONBOARDING) {
+        enterGuest();
+        return;
+      }
       if (!inAuth) {
         router.replace("/auth/login");
       }
@@ -120,7 +129,7 @@ function RootGate() {
     if (!inOnboarding) {
       router.replace("/onboarding");
     }
-  }, [ready, session, isOnboarded, segments, router, pendingImportUrl, clearPendingImport]);
+  }, [ready, session, isOnboarded, segments, router, pendingImportUrl, clearPendingImport, enterGuest]);
 
   return null;
 }
@@ -227,14 +236,21 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.creme }}>
-        <StatusBar style="dark" />
-        <ErrorBoundary>
-          <RootGate />
-          <RootLayoutNav />
-        </ErrorBoundary>
-      </GestureHandlerRootView>
-    </QueryClientProvider>
+    // N2.1 — ShareIntentProvider rend la donnée de la Share Extension lisible côté
+    // JS via `useShareIntentContext()` (cf. app/import.tsx). La donnée partagée
+    // (URL TikTok/Instagram) n'arrive PAS en deep link query param : elle est
+    // stockée nativement et exposée par ce contexte. `resetOnBackground` purge un
+    // intent obsolète quand l'app repasse au premier plan ; `debug` only en dev.
+    <ShareIntentProvider options={{ debug: __DEV__, resetOnBackground: true }}>
+      <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.creme }}>
+          <StatusBar style="dark" />
+          <ErrorBoundary>
+            <RootGate />
+            <RootLayoutNav />
+          </ErrorBoundary>
+        </GestureHandlerRootView>
+      </QueryClientProvider>
+    </ShareIntentProvider>
   );
 }

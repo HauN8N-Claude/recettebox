@@ -26,6 +26,20 @@
 export const BYPASS_AUTH = false; // Doit rester `false` pour tout build EAS (preview/production).
 
 /**
+ * Si true : l'onboarding tourne NORMALEMENT (contrairement à BYPASS_AUTH qui le
+ * saute), mais à la fin — au lieu de basculer vers le signup/login — on entre en
+ * session invitée (fake user) et on atterrit direct sur les tabs. Permet de
+ * tester « onboarding complet + accueil » sans créer de compte ni toucher à l'auth.
+ *
+ * Comme la session est factice, les SELECT Supabase (recipes, profile…) seront
+ * vides (RLS), mais l'UI est navigable. À remettre à `false` avant tout build EAS.
+ *
+ * NB : l'onboarding ne se rejoue que si `isOnboarded` est false (AsyncStorage).
+ * Sur Expo Go fraîchement installé c'est le cas ; sinon, vide les données de l'app.
+ */
+export const SKIP_LOGIN_AFTER_ONBOARDING = false; // TEMP — test onboarding+accueil sans auth.
+
+/**
  * Fake user injecté quand `BYPASS_AUTH = true`. L'UUID est un UUID nul valide
  * (n'existera jamais en BD). Le `first_name` est utilisé par l'écran Profil
  * (avatar + nom).

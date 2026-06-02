@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Check, Instagram, Music2, Bookmark } from "lucide-react-native";
+import { Check } from "lucide-react-native";
+import { FontAwesome6 } from "@expo/vector-icons";
 import React, { useRef, useState } from "react";
 import {
   Animated,
@@ -34,11 +35,11 @@ const CARDS: CardConfig[] = [
     label: "Réseaux sociaux",
     sublabel: "Insta · TikTok · Pinterest",
     accent: Colors.terracotta,
-    renderTrailing: (color) => (
+    renderTrailing: () => (
       <View style={styles.iconRow}>
-        <Instagram size={16} color={color} strokeWidth={1.8} />
-        <Music2 size={16} color={color} strokeWidth={1.8} />
-        <Bookmark size={16} color={color} strokeWidth={1.8} />
+        <FontAwesome6 name="instagram" size={18} color="#E1306C" />
+        <FontAwesome6 name="tiktok" size={18} color={Colors.encre} />
+        <FontAwesome6 name="pinterest" size={18} color="#E60023" />
       </View>
     ),
   },
@@ -177,6 +178,10 @@ export default function QualifSourcesScreen() {
             </Reveal>
           ))}
         </View>
+
+        <Reveal delay={340 + CARDS.length * 100 + 120}>
+          <Text style={styles.question}>Est-ce que tu es ready ?</Text>
+        </Reveal>
       </ScrollView>
       <OnboardingFooter disabled={selected.length === 0} onPress={onContinue} />
     </View>
@@ -212,6 +217,13 @@ const styles = StyleSheet.create({
   cards: {
     marginTop: 28,
     gap: 14,
+  },
+  question: {
+    fontFamily: "Fraunces_400Regular_Italic",
+    fontSize: 22,
+    color: Colors.encre,
+    lineHeight: 30,
+    marginTop: 28,
   },
   card: {
     paddingHorizontal: 20,

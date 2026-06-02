@@ -7,7 +7,10 @@
  * partage (modèle A « passe-plat »).
  *
  * Flux :
- *   1. Lit le paramètre `url` (ou `text`/`shared`) des query params.
+ *   1. Résout l'URL à importer depuis deux sources, par priorité :
+ *        a. les query params du deep link direct (`?url=…`, synchrone) ;
+ *        b. la Share Extension, lue côté natif via `useShareIntentContext()`
+ *           (asynchrone — on attend `isReady` avant de trancher).
  *   2. Extrait/nettoie l'URL (tolère « Check this out: https://… »).
  *   3. Si pas de session → mémorise l'URL (pendingImportStore) et redirige vers
  *      l'auth ; RootGate rouvrira cet écran une fois connecté.
@@ -21,6 +24,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useShareIntentContext } from "expo-share-intent";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AlertTriangle, ChefHat, Share2, Sparkles } from "lucide-react-native";
 
@@ -44,39 +48,78 @@ export default function ImportDeepLinkScreen() {
   const { session, ready } = useAuth();
   const setPendingImport = usePendingImportStore((s) => s.setPendingImport);
 
-  // Les query params du deep link. `url` est le cas nominal (extension iOS qui
-  // partage une URL propre) ; `text`/`shared` couvrent le texte TikTok Android.
+  // ── Source 1 : query params du deep link direct `recettebox://import?url=…`.
+  //    Disponibles de façon SYNCHRONE. `url` est le cas nominal ; `text`/`shared`
+  //    couvrent les liens manuels / tests E2E.
   const params = useLocalSearchParams<{ url?: string; text?: string; shared?: string }>();
-  const rawShared = params.url ?? params.text ?? params.shared ?? "";
-  const sharedUrl = extractSharedUrl(decodeMaybe(rawShared));
+  const queryUrl = extractSharedUrl(
+    decodeMaybe(params.url ?? params.text ?? params.shared ?? "")
+  );
 
-  const [phase, setPhase] = useState<Phase>(sharedUrl ? "working" : "help");
+  // ── Source 2 : la Share Extension `expo-share-intent`. La donnée partagée
+  //    N'arrive PAS en query param : elle est lue côté natif via le contexte du
+  //    ShareIntentProvider (cf. _layout.tsx), de façon ASYNCHRONE (`isReady`).
+  //    `webUrl` = URL propre (partage iOS d'un lien) ; `text` = texte contenant
+  //    l'URL noyée (partage TikTok/Android), nettoyé par `extractSharedUrl`.
+  const {
+    isReady: shareIntentReady,
+    hasShareIntent,
+    shareIntent,
+    resetShareIntent,
+  } = useShareIntentContext();
+  const intentUrl = hasShareIntent
+    ? extractSharedUrl(shareIntent.webUrl ?? shareIntent.text ?? "")
+    : "";
+
+  // URL d'import figée une seule fois, priorité query param > share intent :
+  //   null  = source pas encore résolue (on attend le module natif) → spinner ;
+  //   ""    = résolue mais vide → écran d'aide ;
+  //   <url> = cible d'import.
+  // Figée en state pour que `resetShareIntent()` (qui vide la source native) ne
+  // fasse pas perdre l'URL lors d'un « Réessayer ».
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(queryUrl || null);
+  const resolvedRef = useRef<boolean>(Boolean(queryUrl));
+
+  const [phase, setPhase] = useState<Phase>("working");
   const [errorCode, setErrorCode] = useState<ImportErrorCode | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   // Évite un double POST si l'effet se re-déclenche (StrictMode / re-render).
   const startedRef = useRef(false);
 
+  // Résout la source une seule fois. Sans query param, on attend que le module
+  // natif ait répondu (`shareIntentReady`) avant de trancher.
+  useEffect(() => {
+    if (resolvedRef.current) return;
+    if (!shareIntentReady) return;
+    resolvedRef.current = true;
+    setResolvedUrl(intentUrl);
+    // Intent consommé → on vide la source native pour éviter un reprocessing au
+    // prochain montage de l'écran ou retour de background.
+    if (hasShareIntent) resetShareIntent();
+  }, [shareIntentReady, hasShareIntent, intentUrl, resetShareIntent]);
+
   const runImport = useCallback(async () => {
-    if (!sharedUrl) {
+    if (resolvedUrl === null) return; // source pas encore résolue → spinner
+    if (resolvedUrl === "") {
       setPhase("help");
       return;
     }
     // Pas de session → mémorise l'URL et laisse l'auth reprendre la main.
     if (!session) {
-      setPendingImport(sharedUrl);
+      setPendingImport(resolvedUrl);
       router.replace("/auth/login");
       return;
     }
 
     setPhase("working");
     try {
-      const { jobId } = await createImport(sharedUrl);
+      const { jobId } = await createImport(resolvedUrl);
       router.replace(`/import/processing/${jobId}`);
     } catch (err) {
       const e = err instanceof ImportError ? err : new ImportError("UNKNOWN", "Une erreur est survenue.");
       // Session expirée : on re-mémorise et on renvoie vers l'auth.
       if (e.code === "UNAUTHENTICATED") {
-        setPendingImport(sharedUrl);
+        setPendingImport(resolvedUrl);
         router.replace("/auth/login");
         return;
       }
@@ -84,21 +127,22 @@ export default function ImportDeepLinkScreen() {
       setErrorMessage(e.message);
       setPhase("error");
     }
-  }, [sharedUrl, session, setPendingImport, router]);
+  }, [resolvedUrl, session, setPendingImport, router]);
 
   useEffect(() => {
     if (!ready) return; // attend que l'état d'auth soit hydraté
+    if (resolvedUrl === null) return; // attend la résolution de la source
     if (startedRef.current) return;
     startedRef.current = true;
     void runImport();
-  }, [ready, runImport]);
+  }, [ready, resolvedUrl, runImport]);
 
   const retry = useCallback(() => {
     startedRef.current = false;
     setErrorCode(null);
-    setPhase(sharedUrl ? "working" : "help");
+    setPhase("working");
     void runImport();
-  }, [runImport, sharedUrl]);
+  }, [runImport]);
 
   const goPremium = useCallback(() => {
     router.replace("/paywall");

@@ -44,6 +44,9 @@ type AuthState = {
   ready: boolean;
   _initialized: boolean;
   init: () => void;
+  /** Dev — entre en session invitée (fake user) sans passer par l'auth.
+   *  Utilisé par SKIP_LOGIN_AFTER_ONBOARDING (cf. constants/devFlags.ts). */
+  enterGuest: () => void;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -51,6 +54,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   ready: false,
   _initialized: false,
+  enterGuest: () => {
+    const fake = buildFakeAuthState();
+    set({ session: fake.session, user: fake.user, ready: true });
+  },
   init: () => {
     if (get()._initialized) return;
     set({ _initialized: true });

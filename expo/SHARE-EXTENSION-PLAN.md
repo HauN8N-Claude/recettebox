@@ -186,21 +186,34 @@ Identique iOS, sauf que :
 - Installer APK sur téléphone Android perso, vérifier boot
 - Peut être fait EN PARALLÈLE de l'attente Apple Dev → débloque l'audit N0 côté Android
 
-### N2.0 — Install plugin + config app.json [P0]
-**Effort : 0,25 j.**
+### N2.0 — Install plugin + config app.json [P0] ✅ FAIT le 02/06/2026
+**Effort réel : ~0,25 j (config) — reste le re-build EAS.**
 
-- `npm install expo-share-intent` (sans `bunx rork start` qui n'est plus le bon command à ce stade)
-- Ajouter dans `app.json` :
-  - Plugin `expo-share-intent` avec config iOS `iosActivationRules` (cf. annexe A2)
-  - Plugin `expo-share-intent` avec config Android intent filters (cf. annexe A3)
-  - Scheme : `recettebox` (déjà à faire dans EAS-SETUP.md étape B.2)
-- Lancer `npx expo prebuild --clean` (générera les dossiers natifs ios/ et android/ avec l'extension)
-- Re-builder dev client iOS + Android
+- ✅ `bun add expo-share-intent@5.1.1` — ⚠️ **épingler en 5.1.1** (peer `expo@^54`). `expo install` prend la **6.1.1 par erreur** qui exige **SDK 55** → incompatible SDK 54. Pin exact (pas `^5`) pour bloquer le saut en v6.
+- ✅ `app.json` : bloc plugin `["expo-share-intent", {...}]` avec
+  - `iosActivationRules` (WebURL=1, WebPage=1, Text=true) — cf. annexe A2
+  - `iosAppGroupIdentifier: "group.com.recettebox.app"` (le plugin écrit les entitlements tout seul)
+  - `iosShareExtensionName: "RecetteBox"`
+  - `androidIntentFilters: ["text/*"]` (`text/*` = l'option la plus étroite que le plugin accepte ; pas de `text/plain`)
+- ✅ `app/+native-intent.tsx` : route le deep link Share Extension `recettebox://dataUrl=recetteboxShareKey#<type>` → `/import`, **durci sécurité** (ne renvoie plus le path brut → anti open-redirect ; ne transmet qu'une URL `http(s)` validée).
+- ✅ **`patch-package` NON nécessaire** : vérifié empiriquement, `expo prebuild -p ios` réussit (extension ajoutée, aucune erreur xcode) avec xcode@3.0.1 + Expo 54.0.34 + plugin 5.1.1. L'obligation de la doc est périmée pour cette combo.
+- 🔲 **RESTE** : `expo prebuild --clean` + re-build dev clients EAS (iOS bloqué compte Apple ; Android faisable tout de suite). Les dossiers `ios/`/`android/` sont gitignored (générés par EAS).
 
-### N2.1 — Handler deep link dans l'app principale [P0]
-**Effort : 0,5 j.**
+### N2.1 — Handler deep link dans l'app principale [P0] ⚠️ PARTIEL — à re-câbler
+**Effort restant : ~0,25 j.**
 
-- Repurposer `app/import.tsx` (actuellement placeholder paste URL, reporté V1.0.1) en handler du deep link
+> 🔴 **BUG d'archi découvert le 02/06 (revue adversariale N2.0).** `app/import.tsx` lit la donnée via `useLocalSearchParams()` (`url`/`text`/`shared`), MAIS `expo-share-intent` ne passe **pas** l'URL en query param : elle est stockée côté natif et lue via le **hook `useShareIntent()`**. Résultat actuel : après un vrai partage, `import.tsx` ouvre l'écran d'aide « cul-de-sac » et n'importe **jamais**.
+>
+> **À faire pour finaliser N2.1 :**
+> 1. Envelopper la racine dans `<ShareIntentProvider>` dans `app/_layout.tsx` (paquet `expo-share-intent`).
+> 2. Dans `import.tsx`, lire `const { shareIntent } = useShareIntentContext()` et utiliser `shareIntent.webUrl ?? shareIntent.text` en complément des query params (qui restent utiles pour le deep link direct de test).
+> 3. Gérer le cold-start (l'intent est en file avant le montage React — `useShareIntent` le récupère via `getShareIntent` au mount).
+>
+> ⚠️ `app/_layout.tsx` était en cours d'édition côté user (feature `SKIP_LOGIN_AFTER_ONBOARDING`) → coordonner avant de toucher ce fichier.
+
+**Déjà en place (reste valable) :**
+
+- Repurposé `app/import.tsx` (placeholder paste URL → handler), POST `/functions/v1/imports` + écran progression + gestion erreurs/quotas/paywall ✅
 - Lecture des query params via `useLocalSearchParams()` Expo Router
 - Si paramètre `url` présent :
   - Affiche un mini état de transition "On enregistre ta recette..."
@@ -320,7 +333,14 @@ Identique iOS, sauf que :
 | Compte Expo (`eas login`) | ✅ Connecté `polynetia` (cf. EAS-NEXT-STEPS.md) | Fait |
 | Secret EAS `EXPO_PUBLIC_SUPABASE_ANON_KEY` | ✅ Posé (3 environnements, cf. EAS-NEXT-STEPS.md) | Fait |
 
-> **Handler deep link (N2.1) implémenté le 01/06** : `app/import.tsx` est désormais l'endpoint du deep link (cf. annexe A5), branché sur l'Edge Function `imports` via `lib/api/imports.ts`. Reste N2.0 (poser le plugin `expo-share-intent` + config `app.json` avec l'App Group ci-dessus) pour activer le partage natif.
+> **📍 ÉTAT AU 02/06/2026 — reprendre ici :**
+>
+> - ✅ **N2.0 FAIT** : plugin `expo-share-intent@5.1.1` installé + `app.json` configuré (activation rules iOS, App Group, intent filter Android `text/*`) + `+native-intent.tsx` route le deep link Share Extension vers `/import` (durci sécurité). Vérifié : `expo config` + `expo prebuild -p ios` OK. `patch-package` non nécessaire.
+> - ⚠️ **N2.1 À RE-CÂBLER (prioritaire)** : `import.tsx` lit les query params, mais `expo-share-intent` livre l'URL via le hook `useShareIntent()`. Sans `<ShareIntentProvider>` (au `_layout.tsx`) + lecture du hook, le partage ouvre un cul-de-sac. **C'est le vrai déblocage fonctionnel.** (cf. section N2.1 ci-dessus.)
+> - 🟠 **À durcir (F4 sécurité)** : `extractSharedUrl` (`lib/api/imports.ts`) accepte toute URL `http(s)` → ajouter liste blanche hôtes Insta/TikTok (dont `vm.tiktok.com`, `instagr.am`) + forcer `https`.
+> - 🔲 **Prochaines étapes build** : `eas build -p android --profile development` → test partage Android (débloqué). iOS toujours bloqué sur compte Apple Developer payant + capability App Group sur le portail.
+>
+> Tout est branché sur l'Edge Function `imports` via `lib/api/imports.ts` ; écran de progression R2.1 prêt.
 
 ---
 

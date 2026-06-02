@@ -103,14 +103,24 @@ export default function DemoA2Screen() {
         <View style={styles.mockup}>
           {imgError ? (
             <Text style={styles.mockupLabel}>Image non chargée</Text>
-          ) : (
+          ) : mockupSize.width > 0 ? (
+            // Dimensions/offset explicites (= ceux du calcul du halo) au lieu de
+            // `absoluteFill + resizeMode="contain"`, qui n'était pas contraint de
+            // façon fiable dans un parent flex:1 (image rendue à sa taille
+            // naturelle, débordante). Garantit un rendu centré identique web/natif.
             <Image
               source={INSTA_IMG}
-              style={StyleSheet.absoluteFill}
-              resizeMode="contain"
+              style={{
+                position: "absolute",
+                left: offsetX,
+                top: offsetY,
+                width: renderedWidth,
+                height: renderedHeight,
+              }}
+              resizeMode="cover"
               onError={() => setImgError(true)}
             />
-          )}
+          ) : null}
         </View>
 
         {mockupSize.width > 0 && (
