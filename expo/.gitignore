@@ -43,3 +43,6 @@ yarn-error.*
 core
 node_modules
 .expo
+
+# Captures de démo locales (artefacts, non utilisés par l'app)
+.demo-captures/
