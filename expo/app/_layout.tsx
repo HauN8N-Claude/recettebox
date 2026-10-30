@@ -29,6 +29,7 @@ import { Platform, View } from "react-native";
 
 import { Colors } from "@/constants/theme";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ShareIntentHandler } from "@/components/ShareIntentHandler";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -218,6 +219,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <ErrorBoundary>
           <RootGate />
+          {Platform.OS !== "web" && <ShareIntentHandler />}
           <RootLayoutNav />
         </ErrorBoundary>
       </GestureHandlerRootView>

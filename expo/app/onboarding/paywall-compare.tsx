@@ -30,14 +30,14 @@ type Plan = {
 
 const PLANS: Plan[] = [
   { id: "weekly", title: "Hebdomadaire", price: "3,49€", period: "/ semaine" },
-  { id: "monthly", title: "Mensuel", price: "7,99€", period: "/ mois" },
+  { id: "monthly", title: "Mensuel", price: "6,99€", period: "/ mois" },
   {
     id: "annual",
     title: "Annuel",
     price: "49,99€",
     period: "/ an",
     trial: "Soit 4,17€ / mois",
-    badge: "Économise 48%",
+    badge: "Économise 40%",
   },
   { id: "lifetime", title: "À vie", price: "119,99€", period: "paiement unique" },
 ];

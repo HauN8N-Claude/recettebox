@@ -73,7 +73,7 @@ export default function Q11bProfileScreen() {
             </View>
             <Text style={styles.belongText}>
               Tu n&apos;es pas seule.{"\n"}
-              <Text style={styles.belongBig}>76%</Text> des utilisatrices traversent exactement la même chose.
+              <Text style={styles.belongBig}>76%</Text> des utilisateurs traversent exactement la même chose.
             </Text>
           </View>
         </Reveal>

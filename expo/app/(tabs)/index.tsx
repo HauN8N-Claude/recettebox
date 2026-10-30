@@ -15,9 +15,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { currentUser } from "@/constants/mockData";
 import { useRecipes } from "@/lib/api/recipes";
+import { useAuthStore } from "@/stores/authStore";
 import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
-import { ProgressCurve } from "@/components/ProgressCurve";
 import { SourceIcon } from "@/components/SourceIcon";
 
 export default function HomeScreen() {
@@ -34,6 +34,14 @@ export default function HomeScreen() {
   // les 4 suivantes alimentent le carrousel "Récemment importées".
   const suggestedRecipe = recipesList[0];
   const recentlyImported = recipesList.slice(1, 5);
+
+  // Nouvel utilisateur sans aucune recette → on affiche l'état vide didactique
+  // (le geste de partage) à la place du hero de stats.
+  const user = useAuthStore((s) => s.user);
+  const firstName =
+    (user?.user_metadata?.first_name as string | undefined)?.trim() ||
+    currentUser.firstName;
+  const isEmpty = !recipesQuery.isLoading && recipesList.length === 0;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -67,7 +75,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.hello}>
-              Bonjour {currentUser.firstName} <Text>☀️</Text>
+              Bonjour {firstName} <Text>☀️</Text>
             </Text>
           </View>
           <PressableScale
@@ -75,13 +83,39 @@ export default function HomeScreen() {
             style={styles.avatar}
           >
             <Text style={styles.avatarText}>
-              {currentUser.firstName.charAt(0)}
+              {firstName.charAt(0)}
             </Text>
           </PressableScale>
         </View>
       </Reveal>
 
+      {/* ÉTAT VIDE — nouvel utilisateur : on enseigne le geste de partage */}
+      {isEmpty && (
+        <Reveal key={`e-${revealKey}`} delay={200}>
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyTitle}>
+              Ta première recette t&apos;attend.
+            </Text>
+            <Text style={styles.emptySub}>
+              Importe-la en 3 gestes, directement depuis Insta ou TikTok :
+            </Text>
+            <View style={styles.emptySteps}>
+              <EmptyStep
+                n="1"
+                text="Ouvre un Reel ou une vidéo TikTok de recette"
+              />
+              <EmptyStep n="2" text="Appuie sur « Partager »" />
+              <EmptyStep
+                n="3"
+                text="Choisis RecetteBox — on s'occupe du reste"
+              />
+            </View>
+          </View>
+        </Reveal>
+      )}
+
       {/* HERO PROGRESS */}
+      {!isEmpty && (
       <Reveal key={`p-${revealKey}`} delay={200}>
         <View style={styles.heroWrap}>
           <LinearGradient
@@ -90,22 +124,18 @@ export default function HomeScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.hero}
           >
-            <Text style={styles.heroLabel}>TON CARNET · CETTE SEMAINE</Text>
+            <Text style={styles.heroLabel}>TON CARNET</Text>
             <Text style={styles.heroStat}>
-              {currentUser.stats.cookedCount} recettes cuisinées
+              {recipesList.length}{" "}
+              {recipesList.length > 1 ? "recettes" : "recette"}
             </Text>
             <Text style={styles.heroSub}>
-              {currentUser.stats.savedAmount}€ économisés cette semaine
-            </Text>
-            <View style={styles.curveWrap}>
-              <ProgressCurve />
-            </View>
-            <Text style={styles.heroEncourage}>
-              Tu progresses bien, {currentUser.firstName}.
+              Tes recettes préférées, prêtes à cuisiner.
             </Text>
           </LinearGradient>
         </View>
       </Reveal>
+      )}
 
       {/* SUGGESTION (masqué si pas de recettes en BD) */}
       {suggestedRecipe && (
@@ -212,10 +242,71 @@ export default function HomeScreen() {
   );
 }
 
+function EmptyStep({ n, text }: { n: string; text: string }) {
+  return (
+    <View style={styles.emptyStepRow}>
+      <View style={styles.emptyStepNum}>
+        <Text style={styles.emptyStepNumText}>{n}</Text>
+      </View>
+      <Text style={styles.emptyStepText}>{text}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
     backgroundColor: Colors.creme,
+  },
+  emptyWrap: {
+    marginHorizontal: Spacing.screen,
+    backgroundColor: Colors.cremeDeep,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.rule,
+    padding: 22,
+  },
+  emptyTitle: {
+    fontFamily: "Fraunces_400Regular_Italic",
+    fontSize: 22,
+    color: Colors.encre,
+    lineHeight: 28,
+  },
+  emptySub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: Colors.cacao,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  emptySteps: {
+    marginTop: 18,
+    gap: 14,
+  },
+  emptyStepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  emptyStepNum: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.terracotta,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyStepNumText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.creme,
+  },
+  emptyStepText: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: Colors.encre,
+    lineHeight: 20,
   },
   header: {
     flexDirection: "row",

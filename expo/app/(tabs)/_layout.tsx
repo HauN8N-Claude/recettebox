@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { BookOpen, Calendar, Home, ShoppingCart } from "lucide-react-native";
+import { BookOpen, Home } from "lucide-react-native";
 import React from "react";
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -77,34 +77,9 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="plan"
-        options={{
-          title: "Plan",
-          tabBarIcon: ({ color, focused }) => (
-            <Calendar
-              color={color}
-              size={22}
-              strokeWidth={focused ? 2.2 : 1.8}
-              opacity={focused ? 1 : 0.55}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="shopping"
-        options={{
-          title: "Courses",
-          tabBarIcon: ({ color, focused }) => (
-            <ShoppingCart
-              color={color}
-              size={22}
-              strokeWidth={focused ? 2.2 : 1.8}
-              opacity={focused ? 1 : 0.55}
-            />
-          ),
-        }}
-      />
+      {/* Onglets hors MVP — masqués de la tab bar (code conservé, non supprimé) */}
+      <Tabs.Screen name="plan" options={{ href: null }} />
+      <Tabs.Screen name="shopping" options={{ href: null }} />
       {/* Profil masqué de la tab bar — accessible via l'avatar en haut à droite de l'accueil */}
       <Tabs.Screen
         name="profile"

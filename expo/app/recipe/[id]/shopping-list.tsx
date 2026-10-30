@@ -44,6 +44,11 @@ const CATEGORY_ORDER: IngredientCategory[] = [
   "Épicerie",
 ];
 
+// Objet vide STABLE : un sélecteur zustand qui renvoie un nouveau `{}` à chaque
+// render casse useSyncExternalStore (boucle de rendu infinie → crash). On
+// réutilise cette constante partagée à la place.
+const EMPTY_CHECKED: Record<number, boolean> = {};
+
 function categorize(name: string): IngredientCategory {
   const n = name.toLowerCase();
   if (
@@ -98,9 +103,8 @@ export default function ShoppingListScreen() {
   );
   const setServingsInStore = useServingsStore((s) => s.setServings);
 
-  const checked = useCheckedIngredientsStore(
-    (s) => s.checkedByRecipe[recipeId] ?? {},
-  );
+  const checkedByRecipe = useCheckedIngredientsStore((s) => s.checkedByRecipe);
+  const checked = checkedByRecipe[recipeId] ?? EMPTY_CHECKED;
   const toggleCheckInStore = useCheckedIngredientsStore((s) => s.toggleCheck);
   const setManyChecked = useCheckedIngredientsStore((s) => s.setManyChecked);
 
@@ -141,33 +145,8 @@ export default function ShoppingListScreen() {
     setManyChecked(recipeId, allIndices, !allChecked);
   }, [allChecked, allIndices, handleHaptic, recipeId, setManyChecked]);
 
-  const buildShoppingListText = useCallback((): string => {
-    if (!recipe) return "";
-    const header = `Liste de courses — ${recipe.title} (${servings} ${
-      servings > 1 ? "personnes" : "personne"
-    })`;
-    const sections = grouped.map((g) => {
-      const items = g.items
-        .map((i) => `  • ${i.name}${i.quantity ? `  —  ${i.quantity}` : ""}`)
-        .join("\n");
-      return `\n${g.cat}\n${items}`;
-    });
-    return header + sections.join("\n");
-  }, [recipe, servings, grouped]);
-
-  const onShare = useCallback(async () => {
-    if (!recipe) return;
-    handleHaptic(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await Share.share({
-        message: buildShoppingListText(),
-        title: `Liste de courses — ${recipe.title}`,
-      });
-    } catch {
-      // share annulé ou indisponible, on ignore silencieusement
-    }
-  }, [recipe, handleHaptic, buildShoppingListText]);
-
+  // ⚠️ `grouped` doit être déclaré AVANT buildShoppingListText : ce dernier le
+  // référence dans son tableau de dépendances (sinon ReferenceError / crash).
   const grouped = useMemo(() => {
     if (!recipe)
       return [] as {
@@ -194,6 +173,33 @@ export default function ShoppingListScreen() {
       items: buckets.get(c) ?? [],
     }));
   }, [recipe, servings]);
+
+  const buildShoppingListText = useCallback((): string => {
+    if (!recipe) return "";
+    const header = `Liste de courses — ${recipe.title} (${servings} ${
+      servings > 1 ? "personnes" : "personne"
+    })`;
+    const sections = grouped.map((g) => {
+      const items = g.items
+        .map((i) => `  • ${i.name}${i.quantity ? `  —  ${i.quantity}` : ""}`)
+        .join("\n");
+      return `\n${g.cat}\n${items}`;
+    });
+    return header + sections.join("\n");
+  }, [recipe, servings, grouped]);
+
+  const onShare = useCallback(async () => {
+    if (!recipe) return;
+    handleHaptic(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: buildShoppingListText(),
+        title: `Liste de courses — ${recipe.title}`,
+      });
+    } catch {
+      // share annulé ou indisponible, on ignore silencieusement
+    }
+  }, [recipe, handleHaptic, buildShoppingListText]);
 
   if (isLoading) {
     return (

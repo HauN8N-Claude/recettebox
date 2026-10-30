@@ -176,7 +176,10 @@ export default function LibraryScreen() {
       ) : isLoading ? (
         <LoadingState />
       ) : isEmpty ? (
-        <EmptyState insetsBottom={insets.bottom} />
+        <EmptyState
+          insetsBottom={insets.bottom}
+          onPasteLink={() => router.push("/import")}
+        />
       ) : (
         <PopulatedGrid
           list={filtered}
@@ -237,7 +240,13 @@ function DevToggle({
   );
 }
 
-function EmptyState({ insetsBottom }: { insetsBottom: number }) {
+function EmptyState({
+  insetsBottom,
+  onPasteLink,
+}: {
+  insetsBottom: number;
+  onPasteLink: () => void;
+}) {
   return (
     <ScrollView
       contentContainerStyle={[
@@ -270,6 +279,18 @@ function EmptyState({ insetsBottom }: { insetsBottom: number }) {
             highlight
           />
         </View>
+      </Reveal>
+
+      <Reveal delay={700}>
+        <PressableScale
+          onPress={onPasteLink}
+          style={styles.pasteLink}
+          scaleTo={0.97}
+        >
+          <Text style={styles.pasteLinkText}>
+            Pas d&apos;Insta sous la main ? Coller un lien
+          </Text>
+        </PressableScale>
       </Reveal>
 
       <Reveal delay={900}>
@@ -692,6 +713,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.encre,
     lineHeight: 22,
+  },
+  pasteLink: {
+    marginTop: 26,
+    alignSelf: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.rule,
+    backgroundColor: Colors.cremeDeep,
+  },
+  pasteLinkText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.terracotta,
   },
   whisperWrap: {
     marginTop: 40,

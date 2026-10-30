@@ -139,6 +139,25 @@ export default function ImportProcessingScreen() {
     };
   }, [jobId]);
 
+  // Filet de secours : si le Realtime ne délivre pas la fin du job (socket
+  // coupé, réseau instable), on interroge le statut toutes les 4 s jusqu'à
+  // done/failed — ça évite de rester bloqué sur l'écran de chargement.
+  useEffect(() => {
+    if (isPreview || !jobId) return;
+    if (importRow?.status === "done" || importRow?.status === "failed") return;
+    const interval = setInterval(() => {
+      void supabase
+        .from("imports")
+        .select("id, status, recipe_id, error_message")
+        .eq("id", jobId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setImportRow(data as ImportRow);
+        });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPreview, jobId, importRow?.status]);
+
   // Auto-redirect dès que la recette est prête.
   // On passe par l'écran de révélation (qui enchaîne ensuite révélation → aha
   // → fiche), pas directement sur la fiche brute, pour préserver l'effet "wow".

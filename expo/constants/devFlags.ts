@@ -23,7 +23,7 @@
  * Pour revenir au mode normal : remets à `false`, relance Expo, vide les
  * données de l'app si besoin (AsyncStorage garde la fake session sinon).
  */
-export const BYPASS_AUTH = true; // TEMP — pour capture screenshots ASO. À remettre à `false` après.
+export const BYPASS_AUTH = false; // Désactivé le 29/10/2026 pour le build iPhone (connexion réelle requise).
 
 /**
  * Fake user injecté quand `BYPASS_AUTH = true`. L'UUID est un UUID nul valide

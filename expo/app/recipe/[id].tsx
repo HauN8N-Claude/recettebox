@@ -40,6 +40,10 @@ import { useServingsStore } from "@/stores/servingsStore";
 
 const HERO_HEIGHT = 360;
 
+// Hors MVP (29/10/2026) : l'alerte régime/allergies est masquée sur la fiche.
+// Le calcul reste en place (code conservé) mais n'est plus affiché.
+const SHOW_DIET_WARNINGS = false;
+
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -351,8 +355,8 @@ export default function RecipeDetailScreen() {
           </View>
         </Reveal>
 
-        {/* Alerte régime / allergies */}
-        {dietWarnings.length > 0 && (
+        {/* Alerte régime / allergies — masquée hors MVP (SHOW_DIET_WARNINGS) */}
+        {SHOW_DIET_WARNINGS && dietWarnings.length > 0 && (
           <Reveal delay={420}>
             <View style={styles.dietWarning}>
               <AlertTriangle
@@ -491,14 +495,14 @@ export default function RecipeDetailScreen() {
         <PressableScale
           onPress={() => {
             handleHaptic(Haptics.ImpactFeedbackStyle.Medium);
-            router.push(`/cooking/${recipe.id}`);
+            router.push(`/recipe/${recipe.id}/shopping-list`);
           }}
           style={styles.ctaPrimary}
           scaleTo={0.97}
           haptic={false}
         >
-          <ChefHat size={18} color={Colors.creme} strokeWidth={2} />
-          <Text style={styles.ctaPrimaryText}>Cuisiner cette recette</Text>
+          <ShoppingCart size={18} color={Colors.creme} strokeWidth={2} />
+          <Text style={styles.ctaPrimaryText}>Préparer mes courses</Text>
         </PressableScale>
       </View>
     </View>

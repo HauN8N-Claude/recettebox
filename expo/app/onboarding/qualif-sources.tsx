@@ -17,7 +17,7 @@ import { OnboardingFooter, OnboardingHeader } from "@/components/onboarding";
 import { Reveal } from "@/components/Reveal";
 import { progressFor } from "@/constants/onboardingSteps";
 import { useOnboardingStore } from "@/stores/onboardingStore";
-import { navigateNextDemo, type DemoParcours } from "@/components/onboarding/navigateNextDemo";
+import { type DemoParcours } from "@/components/onboarding/navigateNextDemo";
 
 type CardConfig = {
   value: DemoParcours;
@@ -140,7 +140,9 @@ export default function QualifSourcesScreen() {
 
   const onContinue = () => {
     setAnswer("q3_sources_demo", selected);
-    navigateNextDemo(router, selected);
+    // 3ᵉ piste MVP (29/10/2026) : on saute la démo simulée (demo-a*/b*/c*,
+    // conservée sur le disque mais hors routing) et on va à l'écran promesse.
+    router.push("/onboarding/promise");
   };
 
   const displayName = firstName?.trim();
