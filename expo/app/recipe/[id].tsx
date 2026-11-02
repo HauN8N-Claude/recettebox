@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -18,6 +19,7 @@ import {
   Check,
   ChefHat,
   Clock,
+  ExternalLink,
   Heart,
   Minus,
   Plus,
@@ -135,6 +137,16 @@ export default function RecipeDetailScreen() {
     handleHaptic(Haptics.ImpactFeedbackStyle.Medium);
     setFavorite((f) => !f);
   }, [handleHaptic]);
+
+  // Rouvre le post d'origine (Reel Insta / vidéo TikTok…) dans l'app native
+  // concernée ou le navigateur. On tente d'abord l'URL telle quelle ; les
+  // deep-links instagram:// ne sont pas garantis, donc on retombe en silence.
+  const sourceUrl = recipe?.sourceUrl;
+  const openSource = useCallback(() => {
+    if (!sourceUrl) return;
+    handleHaptic(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL(sourceUrl).catch(() => {});
+  }, [sourceUrl, handleHaptic]);
 
   const grouped = useMemo(
     () => (recipe ? groupIngredients(recipe, servings) : []),
@@ -268,10 +280,32 @@ export default function RecipeDetailScreen() {
         <Reveal delay={120}>
           <View style={styles.titleBlock}>
             <View style={styles.sourceRow}>
-              <SourceIcon source={recipe.source} size={13} />
-              <Text style={styles.sourceText}>
-                {recipe.sourceAuthor ?? "Carnet perso"}
-              </Text>
+              {recipe.sourceUrl ? (
+                <Pressable
+                  onPress={openSource}
+                  hitSlop={8}
+                  style={styles.sourceLink}
+                  accessibilityRole="link"
+                  accessibilityLabel="Voir le post d'origine"
+                >
+                  <SourceIcon source={recipe.source} size={13} />
+                  <Text style={[styles.sourceText, styles.sourceTextLink]}>
+                    {recipe.sourceAuthor ?? "Voir le post"}
+                  </Text>
+                  <ExternalLink
+                    size={12}
+                    color={Colors.terracotta}
+                    strokeWidth={2}
+                  />
+                </Pressable>
+              ) : (
+                <View style={styles.sourceLink}>
+                  <SourceIcon source={recipe.source} size={13} />
+                  <Text style={styles.sourceText}>
+                    {recipe.sourceAuthor ?? "Carnet perso"}
+                  </Text>
+                </View>
+              )}
               <View style={styles.sourceDot} />
               <Text style={styles.sourceText}>{recipe.difficulty}</Text>
             </View>
@@ -603,11 +637,20 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 12,
   },
+  sourceLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   sourceText: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
     color: Colors.cacao,
     letterSpacing: 0.2,
+  },
+  sourceTextLink: {
+    color: Colors.terracotta,
+    fontFamily: "Inter_600SemiBold",
   },
   sourceDot: {
     width: 3,

@@ -7,6 +7,7 @@ export type Recipe = {
   title: string;
   source: RecipeSource;
   sourceAuthor?: string;
+  sourceUrl?: string;
   imageUrl: string;
   servings: number;
   prepTimeMinutes: number;

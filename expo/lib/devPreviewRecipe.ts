@@ -14,6 +14,7 @@ export const PREVIEW_RECIPE: Recipe = {
   title: "Pâtes au pesto d'avocat et basilic frais",
   source: "instagram",
   sourceAuthor: "le.bon.gout",
+  sourceUrl: "https://www.instagram.com/reel/C0000000000/",
   imageUrl:
     "https://images.unsplash.com/photo-1556761223-4c4282c73f77?w=600&q=80",
   servings: 4,

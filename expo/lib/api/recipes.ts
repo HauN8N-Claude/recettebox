@@ -75,6 +75,7 @@ function mapRecipeBase(row: DbRecipeRow): Omit<Recipe, "ingredients" | "steps"> 
     title: row.title,
     source: mapSource(row.source),
     sourceAuthor: row.source_author ?? undefined,
+    sourceUrl: row.source_url ?? undefined,
     imageUrl: row.image_url ?? "",
     servings: row.servings ?? 2,
     prepTimeMinutes: row.prep_time_minutes ?? 0,
