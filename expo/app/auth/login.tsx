@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -77,6 +78,21 @@ export default function LoginScreen() {
 
   const goToSignup = () => {
     router.push("/auth/signup");
+  };
+
+  const onSupport = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    const url = `mailto:support@recettebox.app?subject=${encodeURIComponent(
+      "Demande d'assistance — RecetteBox",
+    )}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert(
+        "Impossible d'ouvrir l'app Mail",
+        "Tu peux nous écrire à support@recettebox.app.",
+      );
+    });
   };
 
   return (
@@ -203,6 +219,21 @@ export default function LoginScreen() {
             </Text>
           </Pressable>
         </Reveal>
+
+        <Reveal delay={560}>
+          <Pressable
+            onPress={onSupport}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Contacter le support"
+            style={styles.supportWrap}
+          >
+            <Text style={styles.supportText}>
+              Besoin d&apos;aide pour te connecter ?{" "}
+              <Text style={styles.supportLink}>Contacter le support</Text>
+            </Text>
+          </Pressable>
+        </Reveal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -313,6 +344,21 @@ const styles = StyleSheet.create({
     color: Colors.cacao,
   },
   signupLink: {
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.terracotta,
+    textDecorationLine: "underline",
+  },
+  supportWrap: {
+    alignSelf: "center",
+    marginTop: 16,
+  },
+  supportText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: Colors.cacao,
+    textAlign: "center",
+  },
+  supportLink: {
     fontFamily: "Inter_600SemiBold",
     color: Colors.terracotta,
     textDecorationLine: "underline",

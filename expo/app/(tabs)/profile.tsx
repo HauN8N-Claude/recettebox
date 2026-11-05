@@ -17,6 +17,7 @@ import {
   BellOff,
   ChevronRight,
   FileText,
+  LifeBuoy,
   LogOut,
   Mail,
   Shield,
@@ -160,6 +161,13 @@ export default function ProfileScreen() {
     });
   };
 
+  const onOpenHelp = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    router.push("/legal/help");
+  };
+
   const onOpenTerms = () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -257,6 +265,22 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>AIDE & LÉGAL</Text>
             <View style={styles.card}>
+              <Pressable
+                onPress={onOpenHelp}
+                accessibilityRole="button"
+                accessibilityLabel="Ouvrir le centre d'aide"
+                style={({ pressed }) => [
+                  styles.row,
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}
+              >
+                <View style={styles.rowIcon}>
+                  <LifeBuoy size={18} color={Colors.cacao} strokeWidth={2} />
+                </View>
+                <Text style={styles.rowLabel}>Aide et support</Text>
+                <ChevronRight size={18} color={Colors.cacao} strokeWidth={2} />
+              </Pressable>
+              <View style={styles.rowDivider} />
               <Pressable
                 onPress={onContact}
                 accessibilityRole="button"
