@@ -12,7 +12,7 @@ import { ArrowLeft } from "lucide-react-native";
 import { Colors, Spacing } from "@/constants/theme";
 import { PressableScale } from "@/components/PressableScale";
 
-const LAST_UPDATED = "[DATE_DE_MAJ]";
+const LAST_UPDATED = "30 octobre 2026";
 
 export default function PrivacyScreen() {
   const insets = useSafeAreaInsets();
@@ -60,16 +60,17 @@ export default function PrivacyScreen() {
         <Section title="2. Responsable du traitement">
           <P>
             Le responsable du traitement est{" "}
-            <B>[ÉDITEUR_NOM_LEGAL]</B>, [FORME_JURIDIQUE], dont le siège
-            social est situé [ADRESSE_POSTALE_COMPLÈTE], immatriculée sous
-            le numéro [RCS_OU_SIRET].
+            <B>[à compléter]</B>, [forme juridique à compléter], dont le siège
+            social est situé [adresse à compléter], immatriculée sous
+            le numéro [SIRET à compléter].
           </P>
           <P>
-            <B>Contact :</B> contact@polynetia.com.
+            <B>Contact :</B> support@recettebox.app.
           </P>
           <P>
-            <B>Délégué à la protection des données (DPO) :</B>{" "}
-            [NOM_DPO_OU_MENTION_PAS_DE_DPO_DÉSIGNÉ] — [EMAIL_DPO].
+            <B>Délégué à la protection des données (DPO) :</B> aucun DPO
+            n&apos;a été désigné. Pour toute question relative à vos données,
+            écrivez à support@recettebox.app.
           </P>
         </Section>
 
@@ -281,7 +282,7 @@ export default function PrivacyScreen() {
           </Bullet>
           <P>
             Pour exercer ces droits, contactez-nous à{" "}
-            <B>contact@polynetia.com</B>. Une preuve d&apos;identité pourra
+            <B>support@recettebox.app</B>. Une preuve d&apos;identité pourra
             être demandée en cas de doute raisonnable. Nous répondons dans
             un délai d&apos;un mois, prolongeable de deux mois si la demande
             est complexe.
@@ -342,7 +343,7 @@ export default function PrivacyScreen() {
           <P>
             Pour toute question relative à la présente politique ou à
             l&apos;exercice de vos droits, écrivez-nous à{" "}
-            <B>contact@polynetia.com</B>.
+            <B>support@recettebox.app</B>.
           </P>
         </Section>
       </ScrollView>

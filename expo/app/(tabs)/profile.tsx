@@ -38,8 +38,7 @@ import {
 
 const SAUGE_SOFT = "#E6ECDF";
 
-// TODO P2.6 — replacer par l'email support définitif (nom de domaine app à créer)
-const SUPPORT_EMAIL = "contact@recettebox.app";
+const SUPPORT_EMAIL = "support@recettebox.app";
 const SUPPORT_SUBJECT = "Support RecetteBox";
 
 function getInitial(firstName?: string | null, email?: string | null): string {

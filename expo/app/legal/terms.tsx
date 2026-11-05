@@ -12,7 +12,7 @@ import { ArrowLeft } from "lucide-react-native";
 import { Colors, Spacing } from "@/constants/theme";
 import { PressableScale } from "@/components/PressableScale";
 
-const LAST_UPDATED = "[DATE_DE_MAJ]";
+const LAST_UPDATED = "30 octobre 2026";
 
 export default function TermsScreen() {
   const insets = useSafeAreaInsets();
@@ -48,7 +48,7 @@ export default function TermsScreen() {
             Les présentes Conditions Générales d&apos;Utilisation (ci-après «{" "}
             <B>CGU</B> ») régissent l&apos;utilisation de l&apos;application
             mobile <B>RecetteBox</B> (ci-après « l&apos;Application »), éditée
-            par [ÉDITEUR_NOM_LEGAL].
+            par [à compléter].
           </P>
           <P>
             En téléchargeant, en installant ou en utilisant l&apos;Application,
@@ -61,20 +61,20 @@ export default function TermsScreen() {
 
         <Section title="2. Identification de l'éditeur">
           <P>
-            <B>Éditeur :</B> [ÉDITEUR_NOM_LEGAL], [FORME_JURIDIQUE] au capital
-            de [MONTANT_CAPITAL_OU_INDIVIDUEL].
+            <B>Éditeur :</B> [à compléter], [forme juridique à compléter] au capital
+            de [à compléter].
           </P>
           <P>
-            <B>Siège social :</B> [ADRESSE_POSTALE_COMPLÈTE].
+            <B>Siège social :</B> [adresse à compléter].
           </P>
           <P>
-            <B>Immatriculation :</B> [RCS_OU_SIRET].
+            <B>Immatriculation :</B> [SIRET à compléter].
           </P>
           <P>
-            <B>Directeur de la publication :</B> [NOM_PRÉNOM_DIRECTEUR].
+            <B>Directeur de la publication :</B> [à compléter].
           </P>
           <P>
-            <B>Contact :</B> contact@polynetia.com.
+            <B>Contact :</B> support@recettebox.app.
           </P>
         </Section>
 
@@ -273,17 +273,17 @@ export default function TermsScreen() {
 
         <Section title="13. Droit applicable et juridiction">
           <P>
-            Les présentes CGU sont régies par le droit [PAYS_DROIT_APPLICABLE,
-            ex : français]. Tout litige relatif à leur interprétation ou à
-            leur exécution relève de la compétence exclusive des tribunaux
-            de [VILLE_JURIDICTION], sous réserve des dispositions légales
+            Les présentes CGU sont régies par le droit français. Tout litige
+            relatif à leur interprétation ou à leur exécution relève de la
+            compétence exclusive des tribunaux
+            de [ville à compléter], sous réserve des dispositions légales
             impératives applicables aux consommateurs.
           </P>
           <P>
             Conformément aux articles L. 612-1 et suivants du Code de la
             consommation, le consommateur peut recourir gratuitement à un
             médiateur de la consommation en vue de la résolution amiable
-            d&apos;un litige : [NOM_MÉDIATEUR_CONSOMMATION] — [URL_MÉDIATEUR].
+            d&apos;un litige : [médiateur à compléter] — [URL à compléter].
           </P>
         </Section>
 
@@ -291,7 +291,7 @@ export default function TermsScreen() {
           <P>
             Pour toute question relative aux présentes CGU, vous pouvez
             contacter l&apos;Éditeur à l&apos;adresse :{" "}
-            <B>contact@polynetia.com</B>.
+            <B>support@recettebox.app</B>.
           </P>
         </Section>
       </ScrollView>
