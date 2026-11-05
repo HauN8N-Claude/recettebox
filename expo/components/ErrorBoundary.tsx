@@ -5,6 +5,11 @@ import { AlertTriangle, RotateCcw } from "lucide-react-native";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { PressableScale } from "@/components/PressableScale";
 
+// TEMP diagnostic (nov. 2026) : affiche le détail technique de l'erreur même
+// hors mode dev, pour capturer la cause du crash au partage sur un build de
+// test. ⚠️ Repasser à `false` avant la soumission App Store.
+const SHOW_ERROR_DETAIL = true;
+
 type Props = {
   children: React.ReactNode;
 };
@@ -62,10 +67,10 @@ function ErrorFallback({
         persiste, ferme et rouvre l&apos;app.
       </Text>
 
-      {__DEV__ && Platform.OS !== "web" ? (
+      {(SHOW_ERROR_DETAIL || __DEV__) && Platform.OS !== "web" ? (
         <View style={styles.devBox}>
-          <Text style={styles.devLabel}>Détail (dev seulement)</Text>
-          <Text style={styles.devText} numberOfLines={6}>
+          <Text style={styles.devLabel}>Détail technique (diagnostic)</Text>
+          <Text style={styles.devText} numberOfLines={12}>
             {error.message}
           </Text>
         </View>
