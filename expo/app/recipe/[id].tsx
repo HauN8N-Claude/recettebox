@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import {
   ActivityIndicator,
   Animated,
-  Image,
   Linking,
   Platform,
   Pressable,
@@ -83,6 +82,17 @@ export default function RecipeDetailScreen() {
   const [checked, setChecked] = useState<Record<number, boolean>>({});
 
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Fondu d'apparition de la photo héros : évite le "pop" brutal sur fond vide
+  // quand l'image réseau finit de charger → ouverture de fiche plus douce.
+  const heroOpacity = useRef(new Animated.Value(0)).current;
+  const onHeroLoad = useCallback(() => {
+    Animated.timing(heroOpacity, {
+      toValue: 1,
+      duration: 450,
+      useNativeDriver: true,
+    }).start();
+  }, [heroOpacity]);
 
   const onScroll = useMemo(
     () =>
@@ -222,7 +232,11 @@ export default function RecipeDetailScreen() {
         ]}
         pointerEvents="none"
       >
-        <Image source={{ uri: recipe.imageUrl }} style={styles.heroImage} />
+        <Animated.Image
+          source={{ uri: recipe.imageUrl }}
+          style={[styles.heroImage, { opacity: heroOpacity }]}
+          onLoad={onHeroLoad}
+        />
         <LinearGradient
           colors={["rgba(42,37,32,0.35)", "rgba(42,37,32,0)"]}
           style={styles.heroFadeTop}

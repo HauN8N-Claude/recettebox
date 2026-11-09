@@ -1,26 +1,26 @@
 /**
- * R2.1 — Écran d'attente d'import (Sprint 1, 14/05/2026).
+ * Écran d'attente d'import — version "une scène par étape" (refonte UX).
  *
- * Affiche la progression d'un job d'import (table `imports` côté BD) au user
- * pendant que le worker Railway traite la recette (téléchargement → transcription
- * → vision → fusion Claude). Utilise Supabase Realtime pour recevoir les
- * changements de statut en push (pas de polling).
+ * Objectif : pendant que le worker traite la recette (téléchargement →
+ * transcription → vision → structuration), l'utilisateur voit UNE scène
+ * plein écran par étape, avec une transition en fondu entre chaque étape,
+ * un emoji vivant et une phrase écrite pour un gourmand (pas pour un dev).
  *
- * Comportement :
- *   - Subscribe à postgres_changes (UPDATE) sur la ligne imports.id = jobId.
- *   - Affiche une liste de 4 étapes (téléchargement / écoute / analyse /
- *     structuration) avec : check vert (passée), spinner (en cours), cercle
- *     gris (à venir).
- *   - À la complétion (status = done + recipe_id non null) → router.replace
- *     automatique vers /recipe/{id}.
- *   - À l'échec (status = failed) → message + bouton retour.
- *   - L'utilisateur peut fermer l'écran à tout moment : le worker continue en
- *     arrière-plan, et la notif push (B2.4 backend + P2.4 client) prendra le
- *     relais.
+ * Deux sources de progression :
+ *   - jobId = "pending" : le lien partagé vient d'arriver. On lit le lien
+ *     mémorisé (pendingImportStore), on lance l'import, et on bascule vers le
+ *     vrai jobId dès que le job est créé. Pendant ce temps on affiche l'étape 1.
+ *   - jobId réel : on s'abonne à Supabase Realtime (UPDATE sur imports.id) pour
+ *     suivre le statut en push, avec un filet de secours en polling (4 s).
+ *
+ * jobId = "preview" : force une étape mi-parcours pour les captures ASO.
+ *
+ * À la complétion (status = done + recipe_id) → on enchaîne sur l'écran de
+ * révélation (reveal → aha → fiche). L'utilisateur peut fermer à tout moment :
+ * le worker continue en arrière-plan et la notif push prend le relais.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Pressable,
@@ -31,12 +31,13 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AlertTriangle, Check, X } from "lucide-react-native";
+import { AlertTriangle, X } from "lucide-react-native";
 
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
-import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
+import { startImport } from "@/lib/api/imports";
+import { usePendingImportStore } from "@/stores/pendingImportStore";
 
 type ImportStatus =
   | "pending"
@@ -54,29 +55,46 @@ type ImportRow = {
   error_message: string | null;
 };
 
-type StepState = "done" | "active" | "pending";
-
-const STEPS: { key: ImportStatus; label: string }[] = [
-  { key: "downloading", label: "Téléchargement de la vidéo" },
-  { key: "transcribing", label: "Écoute de la voix" },
-  { key: "extracting", label: "Analyse des images" },
-  { key: "structuring", label: "Construction de la recette" },
+// Copy "gourmand" — une scène par étape. L'emoji + la phrase sont le héros ;
+// la sous-phrase rassure sur ce qui se passe, sans jargon technique.
+const STEPS: {
+  key: Exclude<ImportStatus, "pending" | "done" | "failed">;
+  emoji: string;
+  line: string;
+  sub: string;
+}[] = [
+  {
+    key: "downloading",
+    emoji: "🎬",
+    line: "On déballe ta vidéo",
+    sub: "On récupère le reel que tu viens de partager.",
+  },
+  {
+    key: "transcribing",
+    emoji: "👂",
+    line: "On capte le chef",
+    sub: "On écoute chaque astuce dite à voix haute.",
+  },
+  {
+    key: "extracting",
+    emoji: "🛒",
+    line: "On fait tes courses",
+    sub: "On repère les ingrédients et les bonnes quantités.",
+  },
+  {
+    key: "structuring",
+    emoji: "📝",
+    line: "On dresse ta recette",
+    sub: "On met tout au propre : étapes et liste de courses.",
+  },
 ];
 
-const STEP_ORDER: ImportStatus[] = STEPS.map((s) => s.key);
+const STEP_ORDER = STEPS.map((s) => s.key);
 
-// "pending" est avant downloading (le worker n'a pas encore pris le job).
-// On considère que l'étape 0 (downloading) est "active" même en pending,
-// pour ne pas montrer 4 cercles gris au démarrage.
-function getStepState(currentStatus: ImportStatus, stepIndex: number): StepState {
-  if (currentStatus === "done") return "done";
-  if (currentStatus === "failed") return "pending";
-  const currentIndex =
-    currentStatus === "pending" ? 0 : STEP_ORDER.indexOf(currentStatus);
-  if (currentIndex === -1) return "pending";
-  if (stepIndex < currentIndex) return "done";
-  if (stepIndex === currentIndex) return "active";
-  return "pending";
+function activeStepIndex(status: ImportStatus): number {
+  if (status === "pending") return 0;
+  const i = STEP_ORDER.indexOf(status as (typeof STEP_ORDER)[number]);
+  return i === -1 ? 0 : i;
 }
 
 export default function ImportProcessingScreen() {
@@ -84,22 +102,55 @@ export default function ImportProcessingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // Mode preview (id === "preview") : utilisé pour les captures ASO et la
-  // validation visuelle de l'écran. On force un état "extracting" (étape
-  // mi-parcours, visuellement riche) sans appel Supabase ni Realtime.
   const isPreview = jobId === "preview";
+  const isPending = jobId === "pending";
 
   const [importRow, setImportRow] = useState<ImportRow | null>(
     isPreview
       ? { id: "preview", status: "extracting", recipe_id: null, error_message: null }
       : null,
   );
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<{ title: string; body: string } | null>(
+    null,
+  );
 
-  // Fetch initial + subscription Realtime à la table imports filtrée sur jobId.
+  // --- jobId "pending" : on lance l'import puis on bascule vers le vrai job ---
   useEffect(() => {
-    if (isPreview) return;
-    if (!jobId) return;
+    if (!isPending) return;
+    // Lecture + vidage synchrones du lien mémorisé (évite un relancement par
+    // le ShareIntentHandler).
+    const url = usePendingImportStore.getState().url;
+    usePendingImportStore.getState().clear();
+
+    if (!url) {
+      setLocalError({
+        title: "Aucun lien à importer",
+        body: "Reviens sur Instagram ou TikTok, puis partage une recette vers RecetteBox.",
+      });
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const result = await startImport(url);
+      if (cancelled) return;
+      if (result.ok) {
+        router.replace(`/import/processing/${result.jobId}`);
+      } else if (result.code.startsWith("QUOTA")) {
+        router.replace("/paywall");
+      } else {
+        setLocalError({ title: "Import impossible", body: result.message });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPending, router]);
+
+  // --- jobId réel : fetch initial + subscription Realtime ---
+  useEffect(() => {
+    if (isPreview || isPending || !jobId) return;
     let cancelled = false;
 
     async function fetchOnce() {
@@ -111,7 +162,10 @@ export default function ImportProcessingScreen() {
 
       if (cancelled) return;
       if (error) {
-        setFetchError(error.message);
+        setLocalError({
+          title: "Impossible de suivre cet import",
+          body: "Vérifie ta connexion internet, puis ferme et réessaie.",
+        });
         return;
       }
       if (data) setImportRow(data as ImportRow);
@@ -140,13 +194,12 @@ export default function ImportProcessingScreen() {
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, [jobId]);
+  }, [jobId, isPreview, isPending]);
 
-  // Filet de secours : si le Realtime ne délivre pas la fin du job (socket
-  // coupé, réseau instable), on interroge le statut toutes les 4 s jusqu'à
-  // done/failed — ça évite de rester bloqué sur l'écran de chargement.
+  // Filet de secours : si le Realtime ne délivre pas la fin (socket coupé),
+  // on interroge le statut toutes les 4 s jusqu'à done/failed.
   useEffect(() => {
-    if (isPreview || !jobId) return;
+    if (isPreview || isPending || !jobId) return;
     if (importRow?.status === "done" || importRow?.status === "failed") return;
     const interval = setInterval(() => {
       void supabase
@@ -159,25 +212,22 @@ export default function ImportProcessingScreen() {
         });
     }, 4000);
     return () => clearInterval(interval);
-  }, [isPreview, jobId, importRow?.status]);
+  }, [isPreview, isPending, jobId, importRow?.status]);
 
-  // Auto-redirect dès que la recette est prête.
-  // On passe par l'écran de révélation (qui enchaîne ensuite révélation → aha
-  // → fiche), pas directement sur la fiche brute, pour préserver l'effet "wow".
-  // On laisse ~1,5 s pour que le confetti de fin soit visible avant de partir.
+  // Auto-redirect dès que la recette est prête (on laisse ~1,6 s pour profiter
+  // du confetti de fin avant de partir vers la révélation).
   useEffect(() => {
     if (isPreview) return;
     if (importRow?.status === "done" && importRow.recipe_id) {
       const recipeId = importRow.recipe_id;
       const t = setTimeout(() => {
         router.replace(`/recipe/reveal/${recipeId}`);
-      }, 1500);
+      }, 1600);
       return () => clearTimeout(t);
     }
   }, [importRow, router, isPreview]);
 
   const close = () => {
-    // router.back si possible, sinon retour à la home (cas deep-link froid).
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -185,29 +235,23 @@ export default function ImportProcessingScreen() {
     }
   };
 
-  const status = importRow?.status ?? "pending";
+  const status: ImportStatus = importRow?.status ?? "pending";
   const failed = status === "failed";
+  const done = status === "done";
   const errorMessage = importRow?.error_message ?? null;
 
-  const stepStates = useMemo(
-    () => STEPS.map((_, i) => getStepState(status, i)),
-    [status],
-  );
+  const stepIndex = activeStepIndex(status);
 
-  const currentStep = useMemo(() => {
-    if (status === "done") return STEPS.length;
-    const activeIdx = stepStates.indexOf("active");
-    return activeIdx >= 0 ? activeIdx + 1 : 1;
-  }, [status, stepStates]);
+  // Clé de la scène : change à chaque étape (et au "done") → remonte le bloc
+  // central, ce qui relance l'animation d'entrée = transition en fondu.
+  const stageKey = done ? "done" : failed ? "failed" : `step-${stepIndex}`;
 
-  // Fraction de progression (0→1) pour animer le remplissage de la barre : on
-  // compte les étapes terminées + une demi-étape pour celle en cours.
-  const progress = useMemo(() => {
-    if (status === "done") return 1;
-    const doneCount = stepStates.filter((s) => s === "done").length;
-    const hasActive = stepStates.includes("active");
-    return (doneCount + (hasActive ? 0.5 : 0)) / STEPS.length;
-  }, [status, stepStates]);
+  const showError = localError || failed;
+  const errorTitle = localError?.title ?? "L'import a échoué";
+  const errorBody =
+    localError?.body ??
+    errorMessage ??
+    "On n'a pas pu extraire la recette. Vérifie le lien et réessaie.";
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
@@ -225,55 +269,31 @@ export default function ImportProcessingScreen() {
         </Pressable>
       </View>
 
-      {fetchError ? (
-        <ErrorView
-          title="Impossible de suivre cet import."
-          body="Vérifie ta connexion internet, puis ferme et réessaie."
-          onClose={close}
-        />
-      ) : failed ? (
-        <ErrorView
-          title="L'import a échoué."
-          body={
-            errorMessage ??
-            "On n'a pas pu extraire la recette. Vérifie le lien et réessaie."
-          }
-          onClose={close}
-        />
+      {showError ? (
+        <ErrorView title={errorTitle} body={errorBody} onClose={close} />
       ) : (
         <View style={styles.body}>
-          {status === "done" && <Confetti />}
-          <View style={styles.header}>
-            <Reveal delay={80}>
-              <Text style={styles.title}>
-                {status === "done" ? "C'est prêt !" : "On extrait ta recette…"}
-              </Text>
-            </Reveal>
-            <Reveal delay={200}>
-              <Text style={styles.subtitle}>
-                {status === "done"
-                  ? "On t'emmène à ta recette…"
-                  : "Tu peux fermer l'écran, on te préviendra quand c'est prêt."}
-              </Text>
-            </Reveal>
-            <Reveal delay={300}>
-              <View style={styles.progressWrap}>
-                <ProgressBar progress={progress} />
-                <Text style={styles.progressLabel}>
-                  {status === "done"
-                    ? "Terminé"
-                    : `Étape ${currentStep} sur ${STEPS.length}`}
-                </Text>
-              </View>
-            </Reveal>
-          </View>
+          {done && <Confetti />}
 
-          <View style={styles.stepsList}>
-            {STEPS.map((s, i) => (
-              <Reveal key={s.key} delay={420 + i * 90}>
-                <StepRow label={s.label} state={stepStates[i]} index={i + 1} />
-              </Reveal>
-            ))}
+          <Stage key={stageKey}>
+            <Badge emoji={done ? "🎉" : STEPS[stepIndex].emoji} celebrate={done} />
+            <Text style={styles.line}>
+              {done ? "À table !" : STEPS[stepIndex].line}
+            </Text>
+            <Text style={styles.sub}>
+              {done
+                ? "Ta recette et ta liste de courses t'attendent."
+                : STEPS[stepIndex].sub}
+            </Text>
+          </Stage>
+
+          <View style={styles.footer}>
+            <Dots count={STEPS.length} activeIndex={stepIndex} done={done} />
+            <Text style={styles.footerNote}>
+              {done
+                ? "C'est prêt."
+                : "Tu peux fermer — on te prévient dès que c'est prêt."}
+            </Text>
           </View>
         </View>
       )}
@@ -281,124 +301,149 @@ export default function ImportProcessingScreen() {
   );
 }
 
-function StepRow({
-  label,
-  state,
-  index,
-}: {
-  label: string;
-  state: StepState;
-  index: number;
-}) {
-  const isDone = state === "done";
-  const isActive = state === "active";
-
-  // Surlignage de la carte qui apparaît/disparaît en fondu quand l'étape
-  // devient (ou cesse d'être) active.
-  const activeAnim = useRef(new Animated.Value(isActive ? 1 : 0)).current;
-  // "Pop" du check quand l'étape passe à terminée.
-  const checkAnim = useRef(new Animated.Value(isDone ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(activeAnim, {
-      toValue: isActive ? 1 : 0,
-      duration: 300,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [isActive, activeAnim]);
-
-  useEffect(() => {
-    Animated.spring(checkAnim, {
-      toValue: isDone ? 1 : 0,
-      friction: 5,
-      tension: 160,
-      useNativeDriver: true,
-    }).start();
-  }, [isDone, checkAnim]);
-
-  return (
-    <View style={styles.stepRow}>
-      {/* Fond surligné animé (fondu) de l'étape en cours */}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.stepRowHighlight, { opacity: activeAnim }]}
-      />
-      <View style={styles.stepIconWrap}>
-        {isActive && <PulseRing />}
-        <View
-          style={[
-            styles.stepIcon,
-            isDone && styles.stepIconDone,
-            isActive && styles.stepIconActive,
-          ]}
-        >
-          {isDone ? (
-            <Animated.View style={{ transform: [{ scale: checkAnim }] }}>
-              <Check size={15} color={Colors.creme} strokeWidth={2.5} />
-            </Animated.View>
-          ) : isActive ? (
-            <ActivityIndicator size="small" color={Colors.sauge} />
-          ) : (
-            <Text style={styles.stepNum}>{index}</Text>
-          )}
-        </View>
-      </View>
-      <Text
-        style={[
-          styles.stepLabel,
-          isActive && styles.stepLabelActive,
-          isDone && styles.stepLabelDone,
-        ]}
-      >
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-// Barre de progression dont le remplissage s'anime en douceur à chaque
-// changement d'étape (0 → 1).
-function ProgressBar({ progress }: { progress: number }) {
+// ---------------------------------------------------------------------------
+// Scène : fondu + léger glissement vers le haut à chaque changement d'étape.
+// (Remontée via `key` dans le parent → l'animation d'entrée rejoue à chaque
+// étape, ce qui donne la transition entre "écrans".)
+// ---------------------------------------------------------------------------
+function Stage({ children }: { children: React.ReactNode }) {
   const anim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     Animated.timing(anim, {
-      toValue: progress,
-      duration: 650,
+      toValue: 1,
+      duration: 520,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
-  }, [progress, anim]);
+  }, [anim]);
 
-  const width = anim.interpolate({
+  const translateY = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0%", "100%"],
+    outputRange: [16, 0],
   });
 
   return (
-    <View style={styles.track}>
-      <Animated.View style={[styles.trackFill, { width }]} />
+    <Animated.View style={[styles.stage, { opacity: anim, transform: [{ translateY }] }]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+// Pastille emoji vivante : halo pulsant + léger flottement (ou petit "pop"
+// quand on célèbre la fin).
+function Badge({ emoji, celebrate }: { emoji: string; celebrate: boolean }) {
+  const float = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(float, {
+          toValue: 0,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [float]);
+
+  useEffect(() => {
+    Animated.spring(pop, {
+      toValue: 1,
+      friction: 5,
+      tension: 140,
+      useNativeDriver: true,
+    }).start();
+  }, [pop]);
+
+  const translateY = float.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
+  const scale = pop.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
+
+  return (
+    <View style={styles.badgeWrap}>
+      {!celebrate && <PulseRing />}
+      <Animated.View
+        style={[styles.badge, { transform: [{ translateY }, { scale }] }]}
+      >
+        <Text style={styles.badgeEmoji}>{emoji}</Text>
+      </Animated.View>
     </View>
   );
 }
 
+// Progression par points (une étape = un point).
+function Dots({
+  count,
+  activeIndex,
+  done,
+}: {
+  count: number;
+  activeIndex: number;
+  done: boolean;
+}) {
+  return (
+    <View style={styles.dots}>
+      {Array.from({ length: count }).map((_, i) => {
+        const filled = done || i <= activeIndex;
+        const isActive = !done && i === activeIndex;
+        return (
+          <View
+            key={i}
+            style={[
+              styles.dot,
+              filled && styles.dotFilled,
+              isActive && styles.dotActive,
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+// Halo pulsant derrière la pastille — sensation de "ça travaille".
+function PulseRing() {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim]);
+
+  const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.6] });
+  const opacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.pulseRing, { transform: [{ scale }], opacity }]}
+    />
+  );
+}
+
 // ---------------------------------------------------------------------------
-// Confetti de fin d'extraction.
-// Implémenté avec l'Animated natif de RN (pas de lib externe) : chaque pièce
-// est une petite vue colorée qui tombe en tournant et en dérivant, avec un
-// fondu. useNativeDriver permet de garder l'animation fluide.
+// Confetti de fin (Animated natif, sans lib externe).
 // ---------------------------------------------------------------------------
-const CONFETTI_COLORS = [
-  Colors.terracotta,
-  Colors.sauge,
-  Colors.miel,
-  Colors.cacao,
-];
+const CONFETTI_COLORS = [Colors.terracotta, Colors.sauge, Colors.miel, Colors.cacao];
 
 function Confetti() {
   const { width, height } = useWindowDimensions();
-
   const pieces = useMemo(
     () =>
       Array.from({ length: 28 }).map((_, i) => ({
@@ -451,18 +496,9 @@ function ConfettiPiece({
     }).start();
   }, [t, duration, delay]);
 
-  const translateY = t.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-40, fallTo + 60],
-  });
-  const translateX = t.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, drift],
-  });
-  const rotate = t.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "720deg"],
-  });
+  const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [-40, fallTo + 60] });
+  const translateX = t.interpolate({ inputRange: [0, 1], outputRange: [0, drift] });
+  const rotate = t.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "720deg"] });
   const opacity = t.interpolate({
     inputRange: [0, 0.1, 0.85, 1],
     outputRange: [0, 1, 1, 0],
@@ -486,34 +522,6 @@ function ConfettiPiece({
   );
 }
 
-// Halo pulsant discret derrière l'icône de l'étape en cours : donne une
-// sensation de "travail en cours" plus vivante qu'un simple spinner.
-function PulseRing() {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(anim, {
-        toValue: 1,
-        duration: 1600,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [anim]);
-
-  const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.9] });
-  const opacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0] });
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.pulseRing, { transform: [{ scale }], opacity }]}
-    />
-  );
-}
-
 function ErrorView({
   title,
   body,
@@ -525,22 +533,14 @@ function ErrorView({
 }) {
   return (
     <View style={styles.body}>
-      <Reveal delay={80}>
-        <View style={styles.errorIconRing}>
-          <AlertTriangle size={28} color={Colors.terracotta} strokeWidth={1.8} />
-        </View>
-      </Reveal>
-      <Reveal delay={200}>
-        <Text style={styles.title}>{title}</Text>
-      </Reveal>
-      <Reveal delay={320}>
-        <Text style={styles.subtitle}>{body}</Text>
-      </Reveal>
-      <Reveal delay={460}>
-        <PressableScale style={styles.cta} onPress={onClose}>
-          <Text style={styles.ctaText}>Fermer</Text>
-        </PressableScale>
-      </Reveal>
+      <View style={styles.errorIconRing}>
+        <AlertTriangle size={28} color={Colors.terracotta} strokeWidth={1.8} />
+      </View>
+      <Text style={styles.line}>{title}</Text>
+      <Text style={styles.sub}>{body}</Text>
+      <PressableScale style={styles.cta} onPress={onClose}>
+        <Text style={styles.ctaText}>Fermer</Text>
+      </PressableScale>
     </View>
   );
 }
@@ -568,129 +568,96 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     paddingHorizontal: Spacing.screen,
-    justifyContent: "center",
-    paddingBottom: 72,
-    alignItems: "stretch",
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 36,
-  },
-  progressWrap: {
-    marginTop: 26,
-    alignSelf: "stretch",
-    alignItems: "center",
-    gap: 12,
-  },
-  track: {
-    alignSelf: "stretch",
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.rule,
-    overflow: "hidden",
-  },
-  trackFill: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.sauge,
-  },
-  progressLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: Colors.sauge,
-  },
-  title: {
-    fontFamily: "Fraunces_400Regular_Italic",
-    fontSize: 26,
-    color: Colors.encre,
-    textAlign: "center",
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.cacao,
-    textAlign: "center",
-    marginTop: 12,
-    lineHeight: 20,
-    maxWidth: 320,
-    alignSelf: "center",
-  },
-  stepsList: {
-    gap: 10,
-  },
-  stepRow: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: Radius.card,
-  },
-  stepRowHighlight: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: Radius.card,
-    backgroundColor: Colors.cremeDeep,
-    borderWidth: 1,
-    borderColor: Colors.sauge,
-  },
-  stepIconWrap: {
-    width: 32,
-    height: 32,
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 40,
+  },
+  stage: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  badgeWrap: {
+    width: 128,
+    height: 128,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 34,
   },
   pulseRing: {
     position: "absolute",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
     backgroundColor: Colors.sauge,
   },
-  stepIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  badge: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: Colors.cremeDeep,
     borderWidth: 1,
     borderColor: Colors.rule,
     alignItems: "center",
     justifyContent: "center",
   },
-  stepIconActive: {
-    backgroundColor: Colors.creme,
-    borderColor: Colors.sauge,
+  badgeEmoji: {
+    fontSize: 52,
+    lineHeight: 60,
   },
-  stepIconDone: {
-    backgroundColor: Colors.sauge,
-    borderColor: Colors.sauge,
+
+  line: {
+    fontFamily: "Fraunces_400Regular_Italic",
+    fontSize: 30,
+    color: Colors.encre,
+    textAlign: "center",
+    lineHeight: 36,
+    paddingHorizontal: 8,
   },
-  stepNum: {
-    fontFamily: "Fraunces_500Medium",
-    fontSize: 14,
-    color: Colors.cacao,
-    opacity: 0.6,
-  },
-  stepLabel: {
+  sub: {
     fontFamily: "Inter_400Regular",
     fontSize: 15,
     color: Colors.cacao,
-    flex: 1,
+    textAlign: "center",
+    marginTop: 14,
+    lineHeight: 22,
+    maxWidth: 300,
   },
-  stepLabelActive: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.encre,
+
+  footer: {
+    position: "absolute",
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    gap: 16,
   },
-  stepLabelDone: {
-    color: Colors.encre,
+  dots: {
+    flexDirection: "row",
+    gap: 8,
   },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.rule,
+  },
+  dotFilled: {
+    backgroundColor: Colors.sauge,
+  },
+  dotActive: {
+    width: 22,
+    backgroundColor: Colors.terracotta,
+  },
+  footerNote: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.cacao,
+    textAlign: "center",
+    opacity: 0.8,
+    paddingHorizontal: Spacing.screen,
+  },
+
   errorIconRing: {
     width: 72,
     height: 72,
@@ -700,7 +667,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.rule,
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
     marginBottom: 22,
   },
   cta: {
@@ -710,7 +676,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.terracotta,
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
     paddingHorizontal: 36,
   },
   ctaText: {

@@ -2,7 +2,8 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Users } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { UtensilsCrossed } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
 import { Colors, Spacing } from "@/constants/theme";
@@ -41,9 +42,14 @@ export default function AdjustPortionsScreen() {
     <View style={[styles.wrap, { paddingTop: insets.top + 12 }]}>
       <View style={styles.center}>
         <Reveal delay={80}>
-          <View style={styles.iconWrap}>
-            <Users size={40} color={Colors.sauge} strokeWidth={2} />
-          </View>
+          <LinearGradient
+            colors={["rgba(224,122,95,0.18)", "rgba(232,184,106,0.24)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconWrap}
+          >
+            <UtensilsCrossed size={38} color={Colors.terracotta} strokeWidth={1.8} />
+          </LinearGradient>
         </Reveal>
         <Reveal delay={240}>
           <Text style={styles.title}>C&apos;est noté.</Text>
@@ -75,10 +81,11 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   iconWrap: {
-    width: 80,
-    height: 80,
+    width: 84,
+    height: 84,
     borderRadius: 999,
-    backgroundColor: Colors.cremeDeep,
+    borderWidth: 1,
+    borderColor: "rgba(224,122,95,0.20)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,

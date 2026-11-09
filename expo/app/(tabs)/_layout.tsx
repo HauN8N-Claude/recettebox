@@ -1,12 +1,15 @@
 import { Tabs } from "expo-router";
-import { BookOpen, Home } from "lucide-react-native";
+import { BookOpen, Home, ShoppingBasket } from "lucide-react-native";
 import React from "react";
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
 
 import { Colors } from "@/constants/theme";
+import { useShoppingListStore } from "@/stores/shoppingListStore";
 
 export default function TabLayout() {
+  const coursesCount = useShoppingListStore((s) => s.recipeIds.length);
+
   const handleTabPress = () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -77,9 +80,29 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="shopping"
+        options={{
+          title: "Courses",
+          tabBarBadge: coursesCount > 0 ? coursesCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: Colors.terracotta,
+            color: Colors.creme,
+            fontFamily: "Inter_600SemiBold",
+            fontSize: 10,
+          },
+          tabBarIcon: ({ color, focused }) => (
+            <ShoppingBasket
+              color={color}
+              size={22}
+              strokeWidth={focused ? 2.2 : 1.8}
+              opacity={focused ? 1 : 0.55}
+            />
+          ),
+        }}
+      />
       {/* Onglets hors MVP — masqués de la tab bar (code conservé, non supprimé) */}
       <Tabs.Screen name="plan" options={{ href: null }} />
-      <Tabs.Screen name="shopping" options={{ href: null }} />
       {/* Profil masqué de la tab bar — accessible via l'avatar en haut à droite de l'accueil */}
       <Tabs.Screen
         name="profile"

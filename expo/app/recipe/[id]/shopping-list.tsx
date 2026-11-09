@@ -18,6 +18,7 @@ import {
   Minus,
   Plus,
   Share2,
+  ShoppingBasket,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
@@ -26,60 +27,56 @@ import { Reveal } from "@/components/Reveal";
 import { PressableScale } from "@/components/PressableScale";
 import { SourceIcon } from "@/components/SourceIcon";
 import { useRecipe } from "@/lib/api/recipes";
+import {
+  CATEGORY_ORDER,
+  categorize,
+  scaleQuantity,
+  type IngredientCategory,
+} from "@/lib/shopping";
 import { useServingsStore } from "@/stores/servingsStore";
 import { useCheckedIngredientsStore } from "@/stores/checkedIngredientsStore";
+import { useShoppingListStore } from "@/stores/shoppingListStore";
 
-// --- Utility functions (copied from app/recipe/[id].tsx — Option A) ---
-
-type IngredientCategory =
-  | "Légumes & frais"
-  | "Protéines"
-  | "Crémerie & œufs"
-  | "Épicerie";
-
-const CATEGORY_ORDER: IngredientCategory[] = [
-  "Légumes & frais",
-  "Protéines",
-  "Crémerie & œufs",
-  "Épicerie",
-];
-
-// Objet vide STABLE : un sélecteur zustand qui renvoie un nouveau `{}` à chaque
-// render casse useSyncExternalStore (boucle de rendu infinie → crash). On
-// réutilise cette constante partagée à la place.
-const EMPTY_CHECKED: Record<number, boolean> = {};
-
-function categorize(name: string): IngredientCategory {
-  const n = name.toLowerCase();
-  if (
-    /(courgette|tomate|oignon|ail|échalote|carotte|romaine|basilic|citron|pomme|champignon|thym|coriandre|persil|poireau|salade|cannelle|wakame|alg)/.test(
-      n,
-    )
-  )
-    return "Légumes & frais";
-  if (
-    /(b(œ|oe)uf|lardon|poulet|crevette|saumon|porc|veau|jambon|poisson|tofu)/.test(
-      n,
-    )
-  )
-    return "Protéines";
-  if (/(beurre|parmesan|cr(è|e)me|lait|(œ|oe)uf|fromage|yaourt)/.test(n))
-    return "Crémerie & œufs";
-  return "Épicerie";
-}
-
-function scaleQuantity(qty: string, ratio: number): string {
-  const m = qty.match(/^(\d+(?:[.,]\d+)?)(.*)$/);
-  if (!m) return qty;
-  const num = parseFloat(m[1].replace(",", "."));
-  const rest = m[2];
-  const scaled = num * ratio;
-  const rounded = Math.round(scaled * 10) / 10;
-  const display = Number.isInteger(rounded)
-    ? `${rounded}`
-    : `${rounded}`.replace(".", ",");
-  return `${display}${rest}`;
-}
+// --- Ligne d'ingrédient (isolée) ---
+//
+// Chaque ligne s'abonne UNIQUEMENT à son propre état coché (sélecteur étroit →
+// un booléen). Cocher un ingrédient ne re-render donc QUE sa ligne : l'écran
+// parent (et ses blocs <Reveal> + le ScrollView) ne se re-render pas, donc la
+// position de scroll est conservée et il n'y a plus de « rechargement » visuel.
+const IngredientRow = React.memo(function IngredientRow({
+  recipeId,
+  idx,
+  name,
+  quantity,
+  onToggle,
+}: {
+  recipeId: string;
+  idx: number;
+  name: string;
+  quantity: string;
+  onToggle: (idx: number) => void;
+}) {
+  const isChecked = useCheckedIngredientsStore(
+    (s) => !!s.checkedByRecipe[recipeId]?.[idx],
+  );
+  return (
+    <Pressable onPress={() => onToggle(idx)} style={styles.ingredientRow}>
+      <View style={[styles.checkbox, isChecked && styles.checkboxOn]}>
+        {isChecked && <Check size={13} color={Colors.creme} strokeWidth={3} />}
+      </View>
+      <Text
+        style={[styles.ingredientName, isChecked && styles.ingredientNameDone]}
+      >
+        {name}
+      </Text>
+      <Text
+        style={[styles.ingredientQty, isChecked && styles.ingredientQtyDone]}
+      >
+        {quantity}
+      </Text>
+    </Pressable>
+  );
+});
 
 // --- Main component ---
 
@@ -103,10 +100,17 @@ export default function ShoppingListScreen() {
   );
   const setServingsInStore = useServingsStore((s) => s.setServings);
 
-  const checkedByRecipe = useCheckedIngredientsStore((s) => s.checkedByRecipe);
-  const checked = checkedByRecipe[recipeId] ?? EMPTY_CHECKED;
   const toggleCheckInStore = useCheckedIngredientsStore((s) => s.toggleCheck);
   const setManyChecked = useCheckedIngredientsStore((s) => s.setManyChecked);
+
+  // Liste de courses globale (onglet Courses) : cette recette y est-elle déjà ?
+  const isInShoppingList = useShoppingListStore((s) =>
+    s.recipeIds.includes(recipeId),
+  );
+  const addRecipeToShoppingList = useShoppingListStore((s) => s.addRecipe);
+  const removeRecipeFromShoppingList = useShoppingListStore(
+    (s) => s.removeRecipe,
+  );
 
   const handleHaptic = useCallback((style: Haptics.ImpactFeedbackStyle) => {
     if (Platform.OS !== "web") {
@@ -137,13 +141,39 @@ export default function ShoppingListScreen() {
     () => (recipe ? recipe.ingredients.map((_, i) => i) : []),
     [recipe],
   );
-  const allChecked =
-    allIndices.length > 0 && allIndices.every((i) => checked[i]);
+  // Sélecteur étroit → booléen : l'écran ne se re-render que quand « tout coché »
+  // bascule (cocher le dernier / décocher un), jamais à chaque case cochée.
+  const allChecked = useCheckedIngredientsStore((s) => {
+    if (allIndices.length === 0) return false;
+    const map = s.checkedByRecipe[recipeId];
+    if (!map) return false;
+    return allIndices.every((i) => map[i]);
+  });
 
   const toggleAll = useCallback(() => {
     handleHaptic(Haptics.ImpactFeedbackStyle.Medium);
     setManyChecked(recipeId, allIndices, !allChecked);
   }, [allChecked, allIndices, handleHaptic, recipeId, setManyChecked]);
+
+  const onToggleShoppingList = useCallback(() => {
+    if (isInShoppingList) {
+      handleHaptic(Haptics.ImpactFeedbackStyle.Light);
+      removeRecipeFromShoppingList(recipeId);
+    } else {
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        ).catch(() => {});
+      }
+      addRecipeToShoppingList(recipeId);
+    }
+  }, [
+    isInShoppingList,
+    recipeId,
+    handleHaptic,
+    addRecipeToShoppingList,
+    removeRecipeFromShoppingList,
+  ]);
 
   // ⚠️ `grouped` doit être déclaré AVANT buildShoppingListText : ce dernier le
   // référence dans son tableau de dépendances (sinon ReferenceError / crash).
@@ -252,7 +282,10 @@ export default function ShoppingListScreen() {
         >
           <ArrowLeft size={20} color={Colors.encre} strokeWidth={2} />
         </PressableScale>
-        <Text style={styles.topTitle}>Liste de courses</Text>
+        {/* En-tête épurée : plus de titre système « Liste de courses » (la carte
+            recette juste en dessous fait office d'en-tête). On garde seulement
+            retour + partage. */}
+        <View style={styles.topSpacer} />
         <PressableScale
           onPress={onShare}
           style={styles.iconButton}
@@ -265,7 +298,7 @@ export default function ShoppingListScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
       >
         {/* Recipe summary card */}
         <Reveal delay={80}>
@@ -356,47 +389,16 @@ export default function ShoppingListScreen() {
                 <View key={group.cat}>
                   <Text style={styles.groupTitle}>{group.cat}</Text>
                   <View style={styles.groupList}>
-                    {group.items.map((ing) => {
-                      const isChecked = !!checked[ing.idx];
-                      return (
-                        <Pressable
-                          key={ing.idx}
-                          onPress={() => toggleCheck(ing.idx)}
-                          style={styles.ingredientRow}
-                        >
-                          <View
-                            style={[
-                              styles.checkbox,
-                              isChecked && styles.checkboxOn,
-                            ]}
-                          >
-                            {isChecked && (
-                              <Check
-                                size={13}
-                                color={Colors.creme}
-                                strokeWidth={3}
-                              />
-                            )}
-                          </View>
-                          <Text
-                            style={[
-                              styles.ingredientName,
-                              isChecked && styles.ingredientNameDone,
-                            ]}
-                          >
-                            {ing.name}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.ingredientQty,
-                              isChecked && styles.ingredientQtyDone,
-                            ]}
-                          >
-                            {ing.quantity}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
+                    {group.items.map((ing) => (
+                      <IngredientRow
+                        key={ing.idx}
+                        recipeId={recipeId}
+                        idx={ing.idx}
+                        name={ing.name}
+                        quantity={ing.quantity}
+                        onToggle={toggleCheck}
+                      />
+                    ))}
                   </View>
                 </View>
               ))}
@@ -404,6 +406,35 @@ export default function ShoppingListScreen() {
           </View>
         </Reveal>
       </ScrollView>
+
+      {/* Barre d'action fixe : valider ces courses dans l'onglet Courses */}
+      <View style={[styles.ctaBar, { paddingBottom: insets.bottom + 12 }]}>
+        <PressableScale
+          onPress={onToggleShoppingList}
+          style={[styles.addCta, isInShoppingList && styles.addCtaDone]}
+          scaleTo={0.98}
+          haptic={false}
+          accessibilityLabel={
+            isInShoppingList ? "Retirer de mes courses" : "Ajouter à mes courses"
+          }
+        >
+          {isInShoppingList ? (
+            <Check size={18} color={Colors.sauge} strokeWidth={2.6} />
+          ) : (
+            <ShoppingBasket size={18} color={Colors.creme} strokeWidth={2.2} />
+          )}
+          <Text
+            style={[styles.addCtaText, isInShoppingList && styles.addCtaTextDone]}
+          >
+            {isInShoppingList ? "Ajouté à mes courses" : "Ajouter à mes courses"}
+          </Text>
+        </PressableScale>
+        {isInShoppingList ? (
+          <Text style={styles.ctaHint}>
+            Retrouve-la dans l&apos;onglet Courses 🧺
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -428,10 +459,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  topTitle: {
-    fontFamily: "Fraunces_400Regular_Italic",
-    fontSize: 18,
-    color: Colors.encre,
+  topSpacer: {
+    flex: 1,
   },
   summaryCard: {
     flexDirection: "row",
@@ -584,6 +613,43 @@ const styles = StyleSheet.create({
   },
   ingredientQtyDone: {
     opacity: 0.5,
+  },
+  ctaBar: {
+    paddingHorizontal: Spacing.screen,
+    paddingTop: 12,
+    backgroundColor: Colors.creme,
+    borderTopWidth: 1,
+    borderTopColor: Colors.rule,
+  },
+  addCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    height: 54,
+    borderRadius: Radius.cta,
+    backgroundColor: Colors.terracotta,
+  },
+  addCtaDone: {
+    backgroundColor: Colors.cremeDeep,
+    borderWidth: 1,
+    borderColor: Colors.sauge,
+  },
+  addCtaText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: Colors.creme,
+    letterSpacing: 0.2,
+  },
+  addCtaTextDone: {
+    color: Colors.encre,
+  },
+  ctaHint: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.cacao,
+    textAlign: "center",
+    marginTop: 8,
   },
   notFoundWrap: {
     flex: 1,

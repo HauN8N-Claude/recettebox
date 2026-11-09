@@ -245,9 +245,14 @@ export default function HomeScreen() {
 function EmptyStep({ n, text }: { n: string; text: string }) {
   return (
     <View style={styles.emptyStepRow}>
-      <View style={styles.emptyStepNum}>
+      <LinearGradient
+        colors={[Colors.terracotta, Colors.miel]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.emptyStepNum}
+      >
         <Text style={styles.emptyStepNumText}>{n}</Text>
-      </View>
+      </LinearGradient>
       <Text style={styles.emptyStepText}>{text}</Text>
     </View>
   );
@@ -289,17 +294,22 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   emptyStepNum: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.terracotta,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: Colors.terracotta,
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   emptyStepNumText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
+    fontFamily: "Fraunces_500Medium",
+    fontSize: 16,
     color: Colors.creme,
+    marginTop: -1,
   },
   emptyStepText: {
     flex: 1,

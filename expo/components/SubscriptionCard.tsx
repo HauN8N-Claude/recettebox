@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Alert,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -33,10 +34,6 @@ async function fetchQuota(userId: string): Promise<QuotaRow> {
   return data;
 }
 
-function comingSoonAlert(title: string, body: string) {
-  Alert.alert(title, body);
-}
-
 export function SubscriptionCard() {
   const { user } = useAuth();
   const router = useRouter();
@@ -64,10 +61,23 @@ export function SubscriptionCard() {
   };
 
   const onTapManageSubscription = () => {
-    comingSoonAlert(
-      "Bientôt disponible",
-      "La gestion de l'abonnement Premium arrive très vite.",
-    );
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    // Résiliation/gestion d'abonnement = géré par le store (Apple/Google),
+    // on deep-link vers la page système des abonnements.
+    const url =
+      Platform.OS === "ios"
+        ? "itms-apps://apps.apple.com/account/subscriptions"
+        : "https://play.google.com/store/account/subscriptions";
+    Linking.openURL(url).catch(() => {
+      Alert.alert(
+        "Gérer mon abonnement",
+        Platform.OS === "ios"
+          ? "Ouvre Réglages → ton nom → Abonnements pour gérer ou résilier ton abonnement RecetteBox."
+          : "Ouvre le Play Store → Abonnements pour gérer ou résilier ton abonnement RecetteBox.",
+      );
+    });
   };
 
   if (isLoading) {

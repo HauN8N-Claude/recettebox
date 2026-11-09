@@ -30,6 +30,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
+  BookMarked,
   ChevronUp,
   Clock,
   Minus,
@@ -131,6 +132,18 @@ export default function AhaScreen() {
     router.push(`/recipe/${recipe.id}`);
   }, [recipe, isPreview, router, haptic]);
 
+  // Sortie vers la bibliothèque, SANS passer par le partage. La recette est
+  // déjà enregistrée : l'utilisateur doit pouvoir retrouver ses recettes tout
+  // de suite s'il ne veut pas partager sa liste de courses.
+  const goToLibrary = useCallback(() => {
+    haptic(Haptics.ImpactFeedbackStyle.Light);
+    if (isPreview) {
+      router.replace("/recipe/reveal/preview");
+      return;
+    }
+    router.replace("/(tabs)/library");
+  }, [isPreview, router, haptic]);
+
   // Pulse subtil du chevron en bas (boucle ~1.6s).
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -168,6 +181,25 @@ export default function AhaScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Barre flottante : sortie directe vers la bibliothèque (le partage
+          n'est jamais obligatoire). */}
+      <View
+        style={[styles.topBar, { paddingTop: insets.top + 8 }]}
+        pointerEvents="box-none"
+      >
+        <PressableScale
+          onPress={goToLibrary}
+          style={styles.libraryPill}
+          scaleTo={0.95}
+          haptic={false}
+          accessibilityRole="button"
+          accessibilityLabel="Aller à mes recettes"
+        >
+          <BookMarked size={15} color={Colors.encre} strokeWidth={2} />
+          <Text style={styles.libraryPillText}>Mes recettes</Text>
+        </PressableScale>
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -335,6 +367,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.creme,
+  },
+
+  topBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingHorizontal: Spacing.screen,
+    paddingBottom: 10,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+  },
+  libraryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.creme,
+    borderWidth: 1,
+    borderColor: Colors.rule,
+    shadowColor: Colors.encre,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  libraryPillText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.encre,
+    letterSpacing: 0.2,
   },
 
   heroWrap: {

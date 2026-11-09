@@ -132,6 +132,12 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="recipe/[id]/shopping-list"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="recipe/reveal/[id]"
         options={{
           headerShown: false,

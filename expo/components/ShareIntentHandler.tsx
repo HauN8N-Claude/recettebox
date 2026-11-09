@@ -1,21 +1,26 @@
 /**
  * Écoute les partages entrants (Instagram / TikTok → Partager → RecetteBox) via
- * expo-share-intent, puis déclenche le vrai import et ouvre l'écran d'attente.
+ * expo-share-intent, puis ouvre IMMÉDIATEMENT l'écran de chargement.
  *
  * Monté une seule fois dans app/_layout.tsx, et seulement sur mobile (l'extension
  * de partage n'existe pas sur le web).
  *
- * Gap #8 : si le partage arrive AVANT connexion, on mémorise le lien
- * (pendingImportStore) et on reprend l'import automatiquement une fois connecté.
+ * Fix (bug "partage → écran principal au lieu du chargement") :
+ *   Avant, on faisait `await startImport(url)` AVANT de naviguer. Pendant cet
+ *   appel réseau, RootGate affichait la home → flash de l'écran principal.
+ *   Maintenant on se contente de mémoriser le lien puis d'ouvrir tout de suite
+ *   `/import/processing/pending`. C'est CET écran qui déclenche l'import et
+ *   bascule vers le vrai jobId une fois le job créé.
+ *
+ * Gap #8 : si le partage arrive AVANT connexion, le lien reste mémorisé
+ * (pendingImportStore) et l'ouverture se fait automatiquement une fois connecté.
  */
 import { useEffect, useRef } from "react";
-import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useShareIntent } from "expo-share-intent";
 
 import { useAuthStore } from "@/stores/authStore";
 import { usePendingImportStore } from "@/stores/pendingImportStore";
-import { startImport } from "@/lib/api/imports";
 
 // Fallback : si le partage arrive sous forme de texte (pas d'URL directe),
 // on récupère le premier lien http(s) trouvé dedans.
@@ -33,64 +38,33 @@ export function ShareIntentHandler() {
   const ready = useAuthStore((s) => s.ready);
   const pendingUrl = usePendingImportStore((s) => s.url);
   const setPendingUrl = usePendingImportStore((s) => s.setUrl);
-  const clearPendingUrl = usePendingImportStore((s) => s.clear);
   const router = useRouter();
-  const busy = useRef(false);
+  const launching = useRef(false);
 
-  // Lance un import puis ouvre l'écran d'attente (ou paywall / erreur).
-  const runImport = async (url: string) => {
-    const result = await startImport(url);
-    if (result.ok) {
-      router.push(`/import/processing/${result.jobId}`);
-    } else if (result.code.startsWith("QUOTA")) {
-      router.push("/paywall");
-    } else {
-      Alert.alert("Import impossible", result.message);
-    }
-  };
-
-  // 1) Partage entrant.
+  // 1) Capture d'un partage entrant : on mémorise juste le lien.
+  //    (Pas d'appel réseau ici → pas de latence avant la navigation.)
   useEffect(() => {
-    if (!ready || !hasShareIntent || busy.current) return;
-
+    if (!ready || !hasShareIntent) return;
     const url = shareIntent?.webUrl ?? firstUrl(shareIntent?.text);
-    if (!url) {
-      resetShareIntent();
-      return;
-    }
+    if (url) setPendingUrl(url);
+    resetShareIntent();
+  }, [ready, hasShareIntent, shareIntent, setPendingUrl, resetShareIntent]);
 
-    // Pas connecté : on mémorise le lien et on laisse RootGate router vers
-    // l'onboarding / la connexion. L'import reprendra une fois la session active.
-    if (!session) {
-      setPendingUrl(url);
-      resetShareIntent();
-      return;
-    }
-
-    busy.current = true;
-    (async () => {
-      try {
-        await runImport(url);
-      } finally {
-        resetShareIntent();
-        busy.current = false;
-      }
-    })();
-  }, [ready, hasShareIntent, shareIntent, session, router, resetShareIntent]);
-
-  // 2) Reprise après connexion : un lien était en attente et la session arrive.
+  // 2) Dès qu'un lien est en attente ET qu'une session est active, on ouvre
+  //    immédiatement l'écran de chargement. L'import est lancé par cet écran
+  //    (route jobId = "pending"), qui bascule ensuite vers le vrai jobId.
+  //    → L'utilisateur voit l'écran de chargement dès la première frame, sans
+  //    passer par la home.
   useEffect(() => {
-    if (!ready || !session || !pendingUrl || busy.current) return;
-    busy.current = true;
-    const url = pendingUrl;
-    (async () => {
-      try {
-        clearPendingUrl();
-        await runImport(url);
-      } finally {
-        busy.current = false;
-      }
-    })();
+    if (!ready || !session || !pendingUrl || launching.current) return;
+    launching.current = true;
+    router.push("/import/processing/pending");
+    // On relâche le verrou après la navigation : le store sera vidé par
+    // l'écran de chargement, donc cet effet ne se redéclenchera pas tout seul.
+    const t = setTimeout(() => {
+      launching.current = false;
+    }, 1200);
+    return () => clearTimeout(t);
   }, [ready, session, pendingUrl, router]);
 
   return null;
