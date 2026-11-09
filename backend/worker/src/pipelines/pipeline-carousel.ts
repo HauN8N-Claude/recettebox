@@ -105,10 +105,22 @@ export async function runCarouselPipeline(
       { log: deps.log },
     );
 
+    // Cover = image du plat final désignée par la vision (hero). L'index pointe
+    // sur `framesForVision`, qui est un préfixe de `allFrames` → l'index est donc
+    // valide dans `allFrames` tant qu'il est < framesForVision.length.
+    // Fallback : la 1re image du carrousel (souvent déjà l'accroche / plat fini).
+    const heroIndex = vision.heroImageIndex;
+    const cover =
+      (heroIndex != null && heroIndex < framesForVision.length
+        ? allFrames[heroIndex]
+        : undefined) ??
+      allFrames[0] ??
+      null;
+
     return {
       recipe: fusion.recipe,
       reason: fusion.reason,
-      coverImageBytes: allFrames[0],
+      coverImageBytes: cover,
       durationSeconds: 0,
     };
   } finally {

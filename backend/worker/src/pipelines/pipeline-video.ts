@@ -91,8 +91,26 @@ export async function runVideoPipeline(
       { log: deps.log },
     );
 
-    // Cover image = première frame "exploitable" (~10% du temps de la vidéo)
-    const cover = framesBytes[Math.min(1, framesBytes.length - 1)] ?? framesBytes[0] ?? null;
+    // Cover image = la frame du PLAT FINAL dressé désignée par la vision Claude
+    // (hero). Avant, on prenait bêtement la 2e frame (~début de vidéo) → c'était
+    // quasi toujours une image de préparation (ingrédients crus, mains qui
+    // travaillent la pâte…), peu appétissante.
+    // Fallback si la vision ne tranche pas : une frame TARDIVE (le plat dressé est
+    // presque toujours en fin de vidéo), jamais le début.
+    const lateFallbackIndex =
+      framesBytes.length > 0 ? Math.floor((framesBytes.length - 1) * 0.85) : 0;
+    const heroIndex = vision.heroImageIndex;
+    const cover =
+      (heroIndex != null ? framesBytes[heroIndex] : undefined) ??
+      framesBytes[lateFallbackIndex] ??
+      framesBytes[framesBytes.length - 1] ??
+      framesBytes[0] ??
+      null;
+    deps.log.info("Cover frame selected", {
+      heroIndex,
+      usedFallback: heroIndex == null,
+      totalFrames: framesBytes.length,
+    });
 
     return {
       recipe: fusion.recipe,

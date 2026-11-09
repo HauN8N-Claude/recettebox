@@ -26,6 +26,13 @@ export interface VisionAnalysis {
   detectedSteps: string[];
   detectedUtensils: string[];
   finalDishDescription: string;
+  /**
+   * Index (0-based, dans l'ordre d'envoi des images) de l'image qui montre le
+   * MIEUX le plat final dressé et appétissant — utilisée comme couverture de la
+   * recette. `null` si aucune image ne montre le plat fini (ex. vidéo qui coupe
+   * avant le dressage).
+   */
+  heroImageIndex: number | null;
   looksLikeRecipe: boolean;
   rawText: string;
 }
@@ -39,23 +46,25 @@ Réponds uniquement en JSON avec exactement cette structure :
   "detected_steps": ["étape 1 observée", ...],
   "detected_utensils": ["ustensile 1", ...],
   "final_dish_description": "description du plat final visible (1 phrase)",
+  "hero_image_index": 0,
   "looks_like_recipe": true | false
 }
 
 Règles :
 - Ingrédients : noms en français, au singulier, sans quantité.
 - Étapes : verbes à l'impératif, courtes, dans l'ordre des images.
+- hero_image_index : les images sont numérotées à partir de 0 dans l'ordre où elles te sont envoyées. Indique le numéro de l'image qui présente le MIEUX le PLAT FINAL terminé et dressé : l'assiette ou le plat servi, prêt à être mangé, qui donne le plus envie (appétissant, net, bien cadré). Ne choisis PAS une image de préparation (ingrédients crus, viande/pâte travaillée à la main, œufs versés, poêle ou four en cours de cuisson), ni un écran de titre/texte, ni une image floue. Si AUCUNE image ne montre le plat fini dressé, mets null.
 - looks_like_recipe = false si les images montrent juste un plat dans un restaurant, un meme, une photo non liée à la cuisine.
 - Pas de texte hors du JSON, pas de markdown, pas de commentaire.
 `;
 
   switch (context) {
     case "single":
-      return base + `\nContexte : une seule image fournie. Souvent un plat fini ou une infographie de recette. Concentre-toi sur les ingrédients visibles et le type de plat.`;
+      return base + `\nContexte : une seule image fournie. Souvent un plat fini ou une infographie de recette. Concentre-toi sur les ingrédients visibles et le type de plat. hero_image_index = 0 si l'image montre le plat fini, sinon null.`;
     case "frames":
-      return base + `\nContexte : ${imageCount} frames extraites d'une vidéo de recette, dans l'ordre chronologique. Les premières frames montrent souvent les ingrédients/préparation, les dernières le plat final.`;
+      return base + `\nContexte : ${imageCount} frames extraites d'une vidéo de recette, dans l'ordre chronologique. Les premières frames montrent souvent les ingrédients/préparation, les dernières le plat final. Pour hero_image_index, le plat fini dressé est presque toujours dans les DERNIÈRES frames : choisis la frame la plus appétissante du plat terminé (jamais une frame de préparation du début).`;
     case "carousel":
-      return base + `\nContexte : ${imageCount} images d'un post carrousel Instagram, dans l'ordre. La 1re image est souvent une accroche (photo du plat fini ou titre), les images suivantes détaillent ingrédients et étapes. Reconstitue le déroulé.`;
+      return base + `\nContexte : ${imageCount} images d'un post carrousel Instagram, dans l'ordre. La 1re image est souvent une accroche (photo du plat fini ou titre), les images suivantes détaillent ingrédients et étapes. Reconstitue le déroulé. Pour hero_image_index, privilégie l'image qui montre le plat fini dressé (souvent la 1re si c'est une vraie photo du plat, sinon une image de fin).`;
   }
 }
 
@@ -149,6 +158,7 @@ export async function analyzeImages(
         detected_steps?: unknown;
         detected_utensils?: unknown;
         final_dish_description?: unknown;
+        hero_image_index?: unknown;
         looks_like_recipe?: unknown;
       }
     | null;
@@ -160,6 +170,7 @@ export async function analyzeImages(
       detectedSteps: [],
       detectedUtensils: [],
       finalDishDescription: "",
+      heroImageIndex: null,
       looksLikeRecipe: false,
       rawText: text,
     };
@@ -168,6 +179,18 @@ export async function analyzeImages(
   const asStrArray = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 
+  // hero_image_index : on ne garde qu'un entier dans la plage valide des images
+  // réellement envoyées (après le trim à 20). Tout le reste → null (fallback géré
+  // par le pipeline appelant).
+  const heroRaw = parsed.hero_image_index;
+  const heroImageIndex =
+    typeof heroRaw === "number" &&
+    Number.isInteger(heroRaw) &&
+    heroRaw >= 0 &&
+    heroRaw < images.length
+      ? heroRaw
+      : null;
+
   return {
     detectedIngredients: asStrArray(parsed.detected_ingredients),
     detectedSteps: asStrArray(parsed.detected_steps),
@@ -175,6 +198,7 @@ export async function analyzeImages(
     finalDishDescription: typeof parsed.final_dish_description === "string"
       ? parsed.final_dish_description
       : "",
+    heroImageIndex,
     looksLikeRecipe: parsed.looks_like_recipe === true,
     rawText: text,
   };
