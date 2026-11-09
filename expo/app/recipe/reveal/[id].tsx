@@ -236,7 +236,10 @@ export default function ImportRevealScreen() {
             </LinearGradient>
           </Animated.View>
 
-          {/* Photo de la recette extraite */}
+          {/* Photo de la recette extraite.
+              Dégradé de marque (couleurs de la source) en fond : tant que la
+              photo réseau n'est pas chargée, la carte reste « habillée » au lieu
+              de montrer un carré gris vide. */}
           <Animated.View
             style={[
               styles.card,
@@ -247,6 +250,12 @@ export default function ImportRevealScreen() {
             ]}
             pointerEvents="none"
           >
+            <LinearGradient
+              colors={getPostGradient(recipe.source)}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
             <Image
               source={{ uri: recipe.imageUrl }}
               style={styles.cardImage}
@@ -405,7 +414,9 @@ const styles = StyleSheet.create({
   cardImage: {
     width: "100%",
     height: "100%",
-    backgroundColor: Colors.cremeDeep,
+    // Transparent (pas de gris plat) : le dégradé de marque placé en dessous
+    // reste visible tant que l'image réseau n'est pas chargée.
+    backgroundColor: "transparent",
   },
   cardImageFade: {
     position: "absolute",

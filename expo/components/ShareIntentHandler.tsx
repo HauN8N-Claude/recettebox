@@ -55,16 +55,22 @@ export function ShareIntentHandler() {
   //    (route jobId = "pending"), qui bascule ensuite vers le vrai jobId.
   //    → L'utilisateur voit l'écran de chargement dès la première frame, sans
   //    passer par la home.
+  //
+  //    Fix (bug "le partage ne marche qu'une fois, puis il faut fermer/rouvrir
+  //    l'app") : le verrou `launching` est relâché quand `pendingUrl` redevient
+  //    null (l'écran de chargement a consommé le lien), PAS via un setTimeout.
+  //    Avant, le cleanup de l'effet annulait ce timeout dès que `pendingUrl`
+  //    passait à null → le verrou restait bloqué à `true` pour toute la session,
+  //    et les partages suivants étaient ignorés (app figée sur la home).
   useEffect(() => {
-    if (!ready || !session || !pendingUrl || launching.current) return;
+    // Lien consommé : on réarme pour le prochain partage.
+    if (!pendingUrl) {
+      launching.current = false;
+      return;
+    }
+    if (!ready || !session || launching.current) return;
     launching.current = true;
     router.push("/import/processing/pending");
-    // On relâche le verrou après la navigation : le store sera vidé par
-    // l'écran de chargement, donc cet effet ne se redéclenchera pas tout seul.
-    const t = setTimeout(() => {
-      launching.current = false;
-    }, 1200);
-    return () => clearTimeout(t);
   }, [ready, session, pendingUrl, router]);
 
   return null;

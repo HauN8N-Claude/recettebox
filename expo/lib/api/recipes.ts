@@ -69,10 +69,26 @@ function mapSource(dbSource: DbRecipeSource): RecipeSource {
   return dbSource;
 }
 
+/**
+ * Nettoie le titre d'une recette extraite.
+ *
+ * Les captions Instagram/TikTok glissent souvent une durée entre parenthèses en
+ * fin de titre (ex. « … en une seule poêle (15 minutes) »). Cette durée fait
+ * doublon avec — et contredit parfois — le temps total affiché sur la fiche
+ * (prep + cuisson). On retire donc UNIQUEMENT une parenthèse finale qui est une
+ * durée (chiffres + unité de temps). Les autres parenthèses (ex. « (végétarien) »)
+ * sont conservées.
+ */
+function cleanRecipeTitle(title: string): string {
+  return title
+    .replace(/\s*\(\s*\d+\s*(?:min(?:ute)?s?|h|heures?)[^)]*\)\s*$/i, "")
+    .trim();
+}
+
 function mapRecipeBase(row: DbRecipeRow): Omit<Recipe, "ingredients" | "steps"> {
   return {
     id: row.id,
-    title: row.title,
+    title: cleanRecipeTitle(row.title),
     source: mapSource(row.source),
     sourceAuthor: row.source_author ?? undefined,
     sourceUrl: row.source_url ?? undefined,

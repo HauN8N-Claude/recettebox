@@ -155,25 +155,30 @@ export default function ShoppingListScreen() {
     setManyChecked(recipeId, allIndices, !allChecked);
   }, [allChecked, allIndices, handleHaptic, recipeId, setManyChecked]);
 
-  const onToggleShoppingList = useCallback(() => {
-    if (isInShoppingList) {
-      handleHaptic(Haptics.ImpactFeedbackStyle.Light);
-      removeRecipeFromShoppingList(recipeId);
-    } else {
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        ).catch(() => {});
-      }
-      addRecipeToShoppingList(recipeId);
+  // Ajout à la liste de courses globale (onglet Courses). Action NON destructive :
+  // appuyer à nouveau n'enlève RIEN (cf. onViewShoppingList / onRemoveFromList).
+  const onAddToShoppingList = useCallback(() => {
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      ).catch(() => {});
     }
-  }, [
-    isInShoppingList,
-    recipeId,
-    handleHaptic,
-    addRecipeToShoppingList,
-    removeRecipeFromShoppingList,
-  ]);
+    addRecipeToShoppingList(recipeId);
+  }, [recipeId, addRecipeToShoppingList]);
+
+  // Une fois la recette ajoutée, le CTA principal mène à l'onglet Courses
+  // (ce que l'utilisateur attend) au lieu de la retirer par mégarde.
+  const onViewShoppingList = useCallback(() => {
+    handleHaptic(Haptics.ImpactFeedbackStyle.Light);
+    router.navigate("/(tabs)/shopping");
+  }, [handleHaptic, router]);
+
+  // Retrait explicite via un lien discret et séparé (plus de suppression
+  // silencieuse en retapant le bouton principal).
+  const onRemoveFromShoppingList = useCallback(() => {
+    handleHaptic(Haptics.ImpactFeedbackStyle.Light);
+    removeRecipeFromShoppingList(recipeId);
+  }, [recipeId, handleHaptic, removeRecipeFromShoppingList]);
 
   // ⚠️ `grouped` doit être déclaré AVANT buildShoppingListText : ce dernier le
   // référence dans son tableau de dépendances (sinon ReferenceError / crash).
@@ -407,33 +412,47 @@ export default function ShoppingListScreen() {
         </Reveal>
       </ScrollView>
 
-      {/* Barre d'action fixe : valider ces courses dans l'onglet Courses */}
+      {/* Barre d'action fixe : valider ces courses dans l'onglet Courses.
+          Une fois ajoutée, le bouton principal MÈNE aux courses (action
+          positive) et le retrait passe par un lien discret séparé → plus de
+          suppression accidentelle en retapant le même bouton. */}
       <View style={[styles.ctaBar, { paddingBottom: insets.bottom + 12 }]}>
-        <PressableScale
-          onPress={onToggleShoppingList}
-          style={[styles.addCta, isInShoppingList && styles.addCtaDone]}
-          scaleTo={0.98}
-          haptic={false}
-          accessibilityLabel={
-            isInShoppingList ? "Retirer de mes courses" : "Ajouter à mes courses"
-          }
-        >
-          {isInShoppingList ? (
-            <Check size={18} color={Colors.sauge} strokeWidth={2.6} />
-          ) : (
-            <ShoppingBasket size={18} color={Colors.creme} strokeWidth={2.2} />
-          )}
-          <Text
-            style={[styles.addCtaText, isInShoppingList && styles.addCtaTextDone]}
-          >
-            {isInShoppingList ? "Ajouté à mes courses" : "Ajouter à mes courses"}
-          </Text>
-        </PressableScale>
         {isInShoppingList ? (
-          <Text style={styles.ctaHint}>
-            Retrouve-la dans l&apos;onglet Courses 🧺
-          </Text>
-        ) : null}
+          <>
+            <PressableScale
+              onPress={onViewShoppingList}
+              style={[styles.addCta, styles.addCtaDone]}
+              scaleTo={0.98}
+              haptic={false}
+              accessibilityLabel="Voir mes courses"
+            >
+              <Check size={18} color={Colors.sauge} strokeWidth={2.6} />
+              <Text style={[styles.addCtaText, styles.addCtaTextDone]}>
+                Ajouté — voir mes courses 🧺
+              </Text>
+            </PressableScale>
+            <Pressable
+              onPress={onRemoveFromShoppingList}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Retirer de mes courses"
+              style={styles.removeLink}
+            >
+              <Text style={styles.removeLinkText}>Retirer de mes courses</Text>
+            </Pressable>
+          </>
+        ) : (
+          <PressableScale
+            onPress={onAddToShoppingList}
+            style={styles.addCta}
+            scaleTo={0.98}
+            haptic={false}
+            accessibilityLabel="Ajouter à mes courses"
+          >
+            <ShoppingBasket size={18} color={Colors.creme} strokeWidth={2.2} />
+            <Text style={styles.addCtaText}>Ajouter à mes courses</Text>
+          </PressableScale>
+        )}
       </View>
     </View>
   );
@@ -644,12 +663,19 @@ const styles = StyleSheet.create({
   addCtaTextDone: {
     color: Colors.encre,
   },
-  ctaHint: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
+  removeLink: {
+    alignSelf: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 4,
+  },
+  removeLinkText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
     color: Colors.cacao,
     textAlign: "center",
-    marginTop: 8,
+    textDecorationLine: "underline",
+    opacity: 0.8,
   },
   notFoundWrap: {
     flex: 1,

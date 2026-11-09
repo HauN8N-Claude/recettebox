@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "recettebox",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAF6F0",
     "newArchEnabled": true,
     "runtimeVersion": {
       "policy": "appVersion"
